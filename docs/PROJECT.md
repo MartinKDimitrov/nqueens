@@ -71,7 +71,7 @@ when persistence lands (Scores / saved game, §8); it is not needed for v1.
 | Screen    | Responsibility                                                    | Pattern | Why                                                            |
 |-----------|------------------------------------------------------------------|---------|---------------------------------------------------------------|
 | **Setup** | choose `n` (≥4) and the (single-option) variant, start game      | MVVM    | two inputs and a button; MVI would be ceremony                |
-| **Game**  | board, conflict highlight, counter, elapsed timer, reset, win    | MVI     | a real state machine — many discrete actions + one-shot effects; this is where live extension happens |
+| **Game**  | top bar (counter, timer, reset) and the board; no bottom bar     | MVI     | a real state machine — many discrete actions + one-shot effects; this is where live extension happens |
 
 Mixing is deliberate: MVI where behaviour is rich and will grow; MVVM where it is simple
 input. Victory celebration is a **one-shot effect** (Channel/SharedFlow), kept out of the
@@ -117,20 +117,15 @@ allowed and flagged).
 Types fixed for v1:
 
 ```kotlin
-sealed interface TapResult {
-    data class Placed(val cell: Cell)  : TapResult
-    data class Removed(val cell: Cell) : TapResult
-    data class Rejected(val reason: RejectReason) : TapResult   // hard rule
-}
-enum class RejectReason { CELL_BLOCKED, CELL_FIXED }
-
-enum class CellStatus { EMPTY, QUEEN, QUEEN_CONFLICT, BLOCKED, FIXED, HINT }
+enum class CellStatus { EMPTY, QUEEN, QUEEN_CONFLICT }
 ```
 
-Conflicts are **soft**: a conflicting queen is placed and highlighted, never refused.
-Turning a soft rule hard is a one-line policy change, not a rewrite. `BLOCKED`/`FIXED`/
-`HINT` render states exist in the enum from v1 (the design legend covers them) but are
-only produced by extensions.
+Conflicts are **soft**: a conflicting queen is placed and highlighted, never refused. Turning
+a soft rule hard is a one-line policy change, not a rewrite.
+
+Nothing in this scope can refuse a tap, so there is no reject path and no `BLOCKED`/`FIXED`
+state: every tap either places or removes. The design legend documents those states for the
+variants that would produce them; the enum grows when one arrives.
 
 ## 6. Testing strategy
 
