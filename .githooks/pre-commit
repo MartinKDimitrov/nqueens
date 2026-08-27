@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Everything a commit has to pass, run before it is made rather than after.
+#
+# Install into a project with:
+#
+#     mkdir -p .githooks && cp ~/.claude/templates/pre-commit .githooks/
+#     chmod +x .githooks/pre-commit
+#     git config core.hooksPath .githooks
+#
+# The reason this is a hook and not a habit: in practice every round of fixes
+# introduces a defect, and the ones that do real damage are caught by checks
+# that had been run -- just not before the commit that buried them. The hook
+# removes the step where a human decides whether this change is worth checking.
+#
+# To skip it you have to say so out loud:
+#
+#     git commit --no-verify
+#
+# which is a decision with a name, and that is the point.
+set -euo pipefail
+
+# --- one entry point called "check" ----------------------------------------
+#
+# The project must define a single command meaning "everything a commit must
+# pass": lint, type check, tests, and whatever else CI runs. One name, so this
+# hook and CI and a person at a keyboard all run the same thing.
+
+run_check() {
+    if [ -f Makefile ] && grep -qE '^check:' Makefile; then
+        make check
+    elif [ -f justfile ] && grep -qE '^check:' justfile; then
+        just check
+    elif [ -f package.json ] && grep -q '"check"' package.json; then
+        if [ -f pnpm-lock.yaml ];   then pnpm run check
+        elif [ -f yarn.lock ];      then yarn check
+        else                             npm run check
+        fi
+    elif [ -f gradlew ]; then
+        ./gradlew check
+    elif [ -f Cargo.toml ]; then
+        cargo clippy -- -D warnings && cargo test
+    else
+        cat >&2 <<'MSG'
+
+pre-commit: this project has no `check` command.
+
+  Define one -- a Makefile target, a just recipe, an npm script -- that runs
+  everything a commit must pass: formatter, linter, type checker, tests, and
+  whatever else CI runs. One name, so that this hook, CI, and a person at a
+  keyboard all run the same thing and cannot drift apart.
+
+MSG
+        exit 1
+    fi
+}
+
+run_check
+
+# `check` must itself exercise the project's real fixtures -- the corpus,
+# golden files or recorded samples -- and not only inputs invented alongside
+# the code. That belongs inside the `check` command rather than here, because
+# this hook cannot tell what a test actually read.
+
+# --- documentation moves with the code -------------------------------------
+#
+# Not a style rule. The recurring defect in any long-lived project is a claim
+# in a document that the code has quietly stopped honouring. Each such claim
+# was true when it was written, and none was corrected in the commit that
+# falsified it.
+#
+# So a commit that changes behaviour has to say what changed, in the same
+# commit. This does not judge whether the documentation is *good*; it only
+# refuses to let it drift silently.
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+
+code=$(echo "$staged" | grep -E '\.(py|ts|tsx|js|jsx|kt|java|go|rs|rb|swift|cs|php|scala|c|cc|cpp|h|hpp)$' \
+     | grep -vE '(^|/)(tests?|spec|__tests__)/' || true)
+docs=$(echo "$staged" | grep -E '\.(md|rst|adoc)$' || true)
+
+if [ -n "$code" ] && [ -z "$docs" ]; then
+    # A docstring or comment counts: much of a project's reasoning belongs
+    # beside the code it explains, and that is the right place for it.
+    touched_prose=$(git diff --cached -U0 -- $code | grep -cE '^\+\s*(#|//|/\*|\*|"""|'"'''"'|--)' || true)
+    if [ "$touched_prose" -eq 0 ]; then
+        cat >&2 <<'MSG'
+
+pre-commit: source changed and nothing was documented.
+
+  Claims go stale silently. They are all true when written; what goes wrong is
+  that the commit which falsifies one does not correct it.
+
+  Update whichever applies -- a docstring or comment beside the change, the
+  architecture notes for shape, the trade-off record for a decision that could
+  have gone the other way, the testing notes for what is now checked, the
+  hand-over notes for what will break first.
+
+  If this change genuinely documents itself, say so:  git commit --no-verify
+
+MSG
+        exit 1
+    fi
+fi
