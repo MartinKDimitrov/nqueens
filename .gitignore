@@ -1,0 +1,38 @@
+# Gradle / Android / Kotlin
+.gradle/
+build/
+/captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+*.keystore
+!debug.keystore
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.kotlin/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Rive (keep authored .riv assets; ignore editor exports/temp)
+*.rev
+
+# Private working area — kept out of the published history
+local/
+*.local.md
+*.local.kt
+*.local.kts
+*.local.properties

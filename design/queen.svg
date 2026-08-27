@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" role="img" aria-label="Queen">
+  <circle cx="12" cy="3.4" r="1.9"/>
+  <circle cx="3.6" cy="7.2" r="1.7"/>
+  <circle cx="20.4" cy="7.2" r="1.7"/>
+  <path d="M12 6.6c-1.1 0-2 .55-2.5 1.4L6.9 9.4 4.6 8.6c-.5.5-1.2.7-1.9.6l2.2 7.1h14.2l2.2-7.1c-.7.1-1.4-.1-1.9-.6l-2.3.8-2.6-1.4A2.9 2.9 0 0 0 12 6.6z"/>
+  <rect x="4.5" y="17.4" width="15" height="3.2" rx="1.1"/>
+</svg>
