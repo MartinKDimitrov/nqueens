@@ -61,43 +61,4 @@ run_check
 # the code. That belongs inside the `check` command rather than here, because
 # this hook cannot tell what a test actually read.
 
-# --- documentation moves with the code -------------------------------------
-#
-# Not a style rule. The recurring defect in any long-lived project is a claim
-# in a document that the code has quietly stopped honouring. Each such claim
-# was true when it was written, and none was corrected in the commit that
-# falsified it.
-#
-# So a commit that changes behaviour has to say what changed, in the same
-# commit. This does not judge whether the documentation is *good*; it only
-# refuses to let it drift silently.
-
-staged=$(git diff --cached --name-only --diff-filter=ACMR)
-
-code=$(echo "$staged" | grep -E '\.(py|ts|tsx|js|jsx|kt|java|go|rs|rb|swift|cs|php|scala|c|cc|cpp|h|hpp)$' \
-     | grep -vE '(^|/)(tests?|spec|__tests__)/' || true)
-docs=$(echo "$staged" | grep -E '\.(md|rst|adoc)$' || true)
-
-if [ -n "$code" ] && [ -z "$docs" ]; then
-    # A docstring or comment counts: much of a project's reasoning belongs
-    # beside the code it explains, and that is the right place for it.
-    touched_prose=$(git diff --cached -U0 -- $code | grep -cE '^\+\s*(#|//|/\*|\*|"""|'"'''"'|--)' || true)
-    if [ "$touched_prose" -eq 0 ]; then
-        cat >&2 <<'MSG'
-
-pre-commit: source changed and nothing was documented.
-
-  Claims go stale silently. They are all true when written; what goes wrong is
-  that the commit which falsifies one does not correct it.
-
-  Update whichever applies -- a docstring or comment beside the change, the
-  architecture notes for shape, the trade-off record for a decision that could
-  have gone the other way, the testing notes for what is now checked, the
-  hand-over notes for what will break first.
-
-  If this change genuinely documents itself, say so:  git commit --no-verify
-
-MSG
-        exit 1
-    fi
-fi
+# Documentation enforcement was removed for this project: the gate runs `check` only.

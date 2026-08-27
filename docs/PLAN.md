@@ -48,6 +48,9 @@ Coverage floors: **`:core:domain` 90%** (line + branch); **`:app` ViewModel pack
 (gated via a JaCoCo rule on `**/*ViewModel*`); other `:app` code reported, not gated.
 Floors activate once each target has code.
 
+The gate runs `check` only. The template's second rule — refusing a commit that changes code
+without documenting it — was removed for this project.
+
 Commit gate (run once, Phase 0):
 
 ```bash

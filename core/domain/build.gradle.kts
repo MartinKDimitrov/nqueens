@@ -30,6 +30,15 @@ tasks.test {
     finalizedBy(tasks.jacocoTestReport)
 }
 
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        csv.required.set(true)
+        html.required.set(true)
+    }
+}
+
 // Coverage floor for the domain: the logic lives here, so it is gated hardest.
 tasks.jacocoTestCoverageVerification {
     violationRules {
