@@ -5,25 +5,43 @@ This is the reasoning behind the shape of the code.
 
 ---
 
-## D1 — Conflict validation: counters, not bitmask
+## D1 — Conflict validation: counting line occupancy
 
-**Context.** On every tap the board must be re-validated in real time and the *set* of
-conflicting queens returned so the UI can highlight them.
+**Context.** On every tap the board must be re-validated and the *set* of conflicting queens
+returned, so the UI can highlight them. Whatever does this must not hard-code the geometry of
+a queen, or adding a variant stops being a domain-only change.
 
 **Options.**
-- **A — Pairwise** (`Set<Cell>` + `attacks`): `O(k)` per check, `O(k²)` for the full set.
-- **B — Counters in HashMap** (row, col, `r−c`, `r+c` → count): `O(1)` update, `O(k)` set.
-- **C — Counters in IntArray**: same asymptotics as B, smaller constants, no boxing.
-- **D — Bitmask**: `O(1)` bitwise, but returns a boolean, not the set of conflicting queens.
+- **A — Pairwise** over `PuzzleRules.attacks`: `O(k²)`. Works for any rule, including ones
+  that are not lines at all (a knight's move).
+- **B — Counters over the four queen axes** (row, col, `r−c`, `r+c`): `O(k)`, but the axes are
+  N-Queens geometry written into the validator.
+- **C — Counters over lines the *rules* supply**: `O(k)`, and the geometry stays in the rule.
+- **D — Bitmask**: fastest, but answers "is this square attacked" with a boolean rather than
+  naming *which* queens conflict.
 
-**Decision.** **B (HashMap counters)** for v1, with **A kept as the test oracle** and **C**
-noted as a drop-in optimisation. **Bitmask is not used for validation.**
+**Decision.** **C.** Rules have two forms: `PuzzleRules.attacks(a, b)` is the definition and
+the general case; `LineRules.linesThrough(cell)` is the structural form the game actually runs.
+`conflicts()` counts how many queens occupy each line and flags those on a line holding more
+than one. **A is kept as the test oracle. Bitmask is not used for validation.**
 
-**Why.** The UI needs the *conflict set* for highlighting, not a boolean. Counters give it
-directly (`count[axis] > 1`) with `O(1)` incremental updates. "Fastest boolean check ≠
-what the UI needs."
+**Why.** The UI needs the conflict *set*, not a boolean, which rules out D. B is fast but
+would put queen geometry in the validator, so a variant would no longer be one new rule. C
+keeps both: `O(k)` detection, and the geometry supplied by whichever rule is in play.
 
-**Revisit if.** Profiling on large `n` shows counter overhead — switch B→C.
+Counting also removes the identity-pair problem for free: a lone queen occupies each of its
+lines once, and the test is `> 1`, so nothing has to compare a queen with itself.
+
+**Costs, accepted.** Two rule interfaces instead of one. Rules whose threats are not lines —
+Amazons, with its knight move — cannot use the fast path and must go through `attacks`.
+
+**Bonus.** Having two independent implementations is what makes the property test meaningful:
+counting and pairwise are different algorithms for the same question, so agreeing on hundreds
+of random boards is a real check rather than a restatement of the code. A single
+implementation could only be tested against itself.
+
+**Revisit if.** Profiling on large `n` shows the `HashMap<Line, Int>` is the bottleneck — the
+same counting works over an `IntArray` keyed by a packed line id.
 
 ---
 

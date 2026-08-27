@@ -53,13 +53,13 @@ Deferred deliberately, each behind an open seam (§7):
 **A pure state machine plus the rules as a strategy.** The domain is framework-free and
 deterministic: `reduce(state, action, rules) -> state`. Every new behaviour is a new
 action + one reducer branch (unit-testable in isolation), and every puzzle *variant* is a
-new `PuzzleRules` implementation — the reducer never changes.
+new rules implementation — the reducer never changes.
 
 ### 4.2 Modules (v1)
 
 | Module         | Contains                                                        | Depends on     |
 |----------------|----------------------------------------------------------------|----------------|
-| `:core:domain` | `Cell`, `GameState`, `PuzzleRules`, `reduce`, selectors, `Solver`. Pure Kotlin, **no Android**. | —              |
+| `:core:domain` | `Cell`, `GameState`, `PuzzleRules`/`LineRules`, `conflicts`, `reduce`, selectors, `Solver`. Pure Kotlin, **no Android**. | —              |
 | `:app`         | Compose UI, ViewModels, Hilt wiring, Rive glue. Feature packages: `setup`, `game`. | `:core:domain` |
 
 `:core:domain` as a separate module lets the compiler **forbid Android in the domain** —
@@ -82,7 +82,7 @@ persistence in §8.)
 
 Hilt. Bindings of interest in v1:
 
-- `PuzzleRules` — bound to `NQueens` (the single variant); a `@Binds`/qualifier seam for
+- `LineRules` — bound to `NQueensLines` (the single variant); a `@Binds`/qualifier seam for
   future variants.
 - `Solver` — the bitmask solver, provided as a singleton; one solution per `n` computed
   once and cached. Built and tested in v1; its UI (hints) is deferred (§3).
@@ -157,7 +157,7 @@ Every plausible request maps to one of five seams:
 
 | # | Kind of request              | Seam                                   | Domain touched? |
 |---|------------------------------|----------------------------------------|-----------------|
-| 1 | new variant / rule           | new `PuzzleRules` implementation       | new class only  |
+| 1 | new variant / rule           | new `LineRules` (or `PuzzleRules`)     | new class only  |
 | 2 | new player action            | new `GameAction` + reducer branch      | reducer only    |
 | 3 | new displayed information    | new selector over `GameState`          | selector only   |
 | 4 | new persistence              | `Repository` interface + implementation (`:core:data`) | no |
