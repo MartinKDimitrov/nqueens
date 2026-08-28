@@ -2,14 +2,27 @@ package com.mdimitrov.nqueens.domain
 
 public const val MIN_BOARD_SIZE: Int = 4
 
+/**
+ * The largest board the domain will hold. The puzzle has solutions far beyond it; this is where
+ * a board stops being one that can be drawn. [snapshotOf] produces an entry per square, so past
+ * roughly a million squares the projection is no longer something to build in one go — and a
+ * state that cannot be projected is a state that would crash whatever asked for it.
+ *
+ * What an app *offers* is a much smaller number, and belongs with the screen that offers it.
+ */
+public const val MAX_BOARD_SIZE: Int = 1024
+
 public data class GameState(
     public val size: Int,
     public val queens: Set<Cell> = emptySet(),
 ) {
     init {
-        require(size >= MIN_BOARD_SIZE) { "Board size must be at least $MIN_BOARD_SIZE, was $size" }
-        require(queens.all { it.row in 0 until size && it.col in 0 until size }) {
-            "Every queen must stand on the board"
+        require(size in MIN_BOARD_SIZE..MAX_BOARD_SIZE) {
+            "Board size must be between $MIN_BOARD_SIZE and $MAX_BOARD_SIZE, was $size"
+        }
+        val offBoard = queens.firstOrNull { !it.isOnBoard(size) }
+        require(offBoard == null) {
+            "Queen $offBoard is outside a ${size}x$size board"
         }
     }
 }

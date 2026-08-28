@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Minimal platform theme for the skeleton; replaced by a Compose Material 3 theme later. -->
     <style name="Theme.NQueens" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>

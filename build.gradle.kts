@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.detekt) apply false
     alias(libs.plugins.spotless) apply false
-    // Applied to the root: reports unused / undeclared dependencies across modules.
+    // Declared here, applied to the modules below: on the root alone it analyses nothing.
     alias(libs.plugins.dependency.analysis)
 }
 
@@ -30,8 +30,17 @@ allprojects {
 // Detekt static analysis on the code modules, built upon its default ruleset.
 subprojects {
     apply(plugin = "io.gitlab.arturbosch.detekt")
+    apply(plugin = "com.autonomousapps.dependency-analysis")
     configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
         buildUponDefaultConfig = true
         config.setFrom(rootProject.files("config/detekt/detekt.yml"))
+    }
+}
+
+dependencyAnalysis {
+    issues {
+        all {
+            onAny { severity("fail") }
+        }
     }
 }

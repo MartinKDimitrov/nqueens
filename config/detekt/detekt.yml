@@ -5,8 +5,13 @@ naming:
     ignoreAnnotated: ['Composable']
 
 style:
+  UnusedPrivateMember:
+    # @Preview functions are invoked by the IDE and the build, never from our code.
+    ignoreAnnotated: ['Preview']
   MagicNumber:
+    # A named property is the naming the rule asks for.
+    ignorePropertyDeclaration: true
     excludes:
       - '**/test/**'
       - '**/androidTest/**'
-      - '**/ui/theme/**'
+      - '**/theme/**'

@@ -1,10 +1,12 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-// Android application shell. Compose, Hilt and navigation are added in the app-scaffold phase.
+// The Android application: Compose UI, navigation, and the screens. The game itself is in
+// :core:domain; what stays here is what belongs to a screen rather than to the puzzle.
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    jacoco
 }
 
 android {
@@ -17,6 +19,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -33,6 +36,17 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // Kotlin warnings already fail the build; Android's should too, or the project holds its
+    // own code to one standard and its resources and manifest to another. The exceptions are
+    // the version advisories: they turn a green build red because somebody else published a
+    // release, and upgrading is a decision to take deliberately, not one to be forced into by
+    // a commit.
+    lint {
+        warningsAsErrors = true
+        abortOnError = true
+        disable += setOf("GradleDependency", "AndroidGradlePluginVersion", "OldTargetApi")
+    }
 }
 
 kotlin {
@@ -45,13 +59,96 @@ kotlin {
 dependencies {
     implementation(project(":core:domain"))
 
+    // Every artifact the source actually imports is declared, so `buildHealth` can hold the
+    // build file to what the code really uses. The BOM keeps their versions in step.
     implementation(platform(libs.compose.bom))
-    implementation(libs.compose.ui)
+    implementation(libs.compose.animation)
+    implementation(libs.compose.foundation)
+    implementation(libs.compose.foundation.layout)
     implementation(libs.compose.material3)
+    implementation(libs.compose.runtime)
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.graphics)
+    implementation(libs.compose.ui.text)
     implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.compose.ui.unit)
     debugImplementation(libs.compose.ui.tooling)
 
+    implementation(libs.androidx.activity)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.navigation.common)
     implementation(libs.navigation.compose)
+    implementation(libs.navigation.runtime)
+    implementation(libs.kotlinx.coroutines.core)
+
+    testImplementation(kotlin("test"))
+    testImplementation(libs.junit)
+}
+
+// Coverage is gated where the screens keep their decisions — the view models — and reported
+// but not gated elsewhere, because composables are checked by running them, not by counting
+// their lines.
+private val viewModelClasses =
+    fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
+        include("**/*ViewModel*.class")
+    }
+
+// The exact file, not a search of the build directory: scanning it makes Gradle believe this
+// task consumes the output of every other one.
+private val unitTestExecutionData =
+    layout.buildDirectory.file("jacoco/testDebugUnitTest.exec")
+
+val viewModelCoverageReport =
+    tasks.register<JacocoReport>("viewModelCoverageReport") {
+        dependsOn("testDebugUnitTest")
+        executionData.setFrom(unitTestExecutionData)
+        classDirectories.setFrom(viewModelClasses)
+        sourceDirectories.setFrom(files("src/main/kotlin"))
+        reports {
+            xml.required.set(true)
+            csv.required.set(true)
+            html.required.set(true)
+        }
+    }
+
+// Both of this gate's inputs are AGP output paths. If either goes missing — a plugin upgrade,
+// a renamed class — JaCoCo has nothing to measure and reports success, or Gradle skips the task
+// outright because `executionData` is annotated `@SkipWhenEmpty`. This runs first and refuses.
+val viewModelCoverageInputs =
+    tasks.register("viewModelCoverageInputs") {
+        dependsOn("testDebugUnitTest")
+        doLast {
+            check(!viewModelClasses.isEmpty) {
+                "No view model classes to measure — the coverage gate would pass without " +
+                    "checking anything. Look at the class directory this task reads."
+            }
+            check(unitTestExecutionData.get().asFile.exists()) {
+                "No unit-test coverage data at ${unitTestExecutionData.get().asFile} — the " +
+                    "coverage gate would be skipped rather than fail."
+            }
+        }
+    }
+
+val viewModelCoverageVerification =
+    tasks.register<JacocoCoverageVerification>("viewModelCoverageVerification") {
+        dependsOn(viewModelCoverageReport, viewModelCoverageInputs)
+        executionData.setFrom(unitTestExecutionData)
+        classDirectories.setFrom(viewModelClasses)
+        sourceDirectories.setFrom(files("src/main/kotlin"))
+
+        violationRules {
+            rule {
+                limit {
+                    counter = "LINE"
+                    value = "COVEREDRATIO"
+                    minimum = "0.85".toBigDecimal()
+                }
+            }
+        }
+    }
+
+tasks.named("check") {
+    dependsOn(viewModelCoverageInputs, viewModelCoverageVerification)
 }

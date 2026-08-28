@@ -2,31 +2,10 @@ package com.mdimitrov.nqueens.domain
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
-
-class GameStateTest {
-    @Test
-    fun `a board smaller than four is refused, because it has no solution`() {
-        assertFailsWith<IllegalArgumentException> { GameState(size = 3) }
-    }
-
-    @Test
-    fun `a queen off the board is refused`() {
-        assertFailsWith<IllegalArgumentException> {
-            GameState(size = 4, queens = setOf(Cell(0, 4)))
-        }
-    }
-
-    @Test
-    fun `a new board starts empty`() {
-        assertTrue(GameState(size = 8).queens.isEmpty())
-    }
-}
 
 class ReduceTest {
     private data class Transition(
-        val describes: String,
+        val description: String,
         val from: GameState,
         val action: GameAction,
         val expected: GameState,
@@ -79,15 +58,35 @@ class ReduceTest {
             )
 
         for (case in transitions) {
-            assertEquals(case.expected, reduce(case.from, case.action), case.describes)
+            assertEquals(case.expected, reduce(case.from, case.action), case.description)
         }
     }
 
     @Test
+    fun `an action that cannot be carried out leaves the board alone`() {
+        val board = GameState(size = 4, queens = setOf(Cell(0, 0)))
+
+        assertEquals(board, reduce(board, GameAction.Toggle(Cell(9, 9))), "tap outside the board")
+        assertEquals(board, reduce(board, GameAction.Toggle(Cell(-1, 0))), "negative coordinate")
+        assertEquals(board, reduce(board, GameAction.NewGame(size = 2)), "board with no solution")
+        assertEquals(
+            board,
+            reduce(board, GameAction.NewGame(size = Int.MAX_VALUE)),
+            "board too large to be drawn",
+        )
+    }
+
+    @Test
     fun `reducing never changes the state it was given`() {
-        val before = GameState(size = 4, queens = setOf(Cell(0, 0)))
-        val snapshot = before.copy()
+        val queens = setOf(Cell(0, 0))
+        val before = GameState(size = 4, queens = queens)
+
         reduce(before, GameAction.Toggle(Cell(2, 2)))
-        assertEquals(snapshot, before)
+        reduce(before, GameAction.Toggle(Cell(0, 0)))
+        reduce(before, GameAction.Reset)
+
+        assertEquals(4, before.size)
+        assertEquals(setOf(Cell(0, 0)), before.queens)
+        assertEquals(setOf(Cell(0, 0)), queens, "the set handed in was written through")
     }
 }

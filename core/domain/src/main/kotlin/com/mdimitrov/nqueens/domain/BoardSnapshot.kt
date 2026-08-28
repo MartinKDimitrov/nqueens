@@ -12,13 +12,18 @@ public data class BoardSnapshot(
     public fun statusAt(
         row: Int,
         col: Int,
-    ): CellStatus = statuses[row * size + col]
+    ): CellStatus {
+        require(row in 0 until size && col in 0 until size) {
+            "No square at row $row, column $col on a ${size}x$size board"
+        }
+        return statuses[row * size + col]
+    }
 }
 
 /** Projects a [state] onto the grid the board draws. */
 public fun snapshotOf(
     state: GameState,
-    rules: LineRules = NQueensLines,
+    rules: LineRules,
 ): BoardSnapshot {
     val conflicting = conflicts(state.queens, rules)
     val statuses =
@@ -41,6 +46,6 @@ public fun snapshotOf(
         size = state.size,
         statuses = statuses,
         queensLeft = queensLeft(state.queens, state.size),
-        isSolved = isSolved(state.queens, state.size, rules),
+        isSolved = state.queens.size == state.size && conflicting.isEmpty(),
     )
 }

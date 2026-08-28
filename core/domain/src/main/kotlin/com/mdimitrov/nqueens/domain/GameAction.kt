@@ -8,6 +8,6 @@ public sealed interface GameAction {
     /** Clear the board without changing its size. */
     public data object Reset : GameAction
 
-    /** Abandon this board and start new one. */
+    /** Abandon this board and start a new one. */
     public data class NewGame(public val size: Int) : GameAction
 }

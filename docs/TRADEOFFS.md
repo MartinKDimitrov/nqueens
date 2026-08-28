@@ -25,9 +25,9 @@ the general case; `LineRules.linesThrough(cell)` is the structural form the game
 `conflicts()` counts how many queens occupy each line and flags those on a line holding more
 than one. **A is kept as the test oracle. Bitmask is not used for validation.**
 
-**Why.** The UI needs the conflict *set*, not a boolean, which rules out D. B is fast but
-would put queen geometry in the validator, so a variant would no longer be one new rule. C
-keeps both: `O(k)` detection, and the geometry supplied by whichever rule is in play.
+**Why.** The UI needs the conflict *set*, not a boolean, which rules out D. B is fast but puts
+queen geometry in the validator, so a variant stops being one new rule. C keeps both: `O(k)`
+detection, and the geometry supplied by whichever rule is in play.
 
 Counting also removes the identity-pair problem for free: a lone queen occupies each of its
 lines once, and the test is `> 1`, so nothing has to compare a queen with itself.
@@ -50,8 +50,9 @@ same counting works over an `IntArray` keyed by a packed line id.
 **Options.** Bitmask backtracking (fastest search); set/HashSet backtracking (clearest);
 explicit `O(n)` construction (no search, but fiddly, one solution from empty).
 
-**Decision.** **Bitmask backtracking**, run **once per `n` and cached**. Built and tested
-in v1; its consumer (hints) is a deferred extension (D10).
+**Decision.** **Not built.** Its only consumer would be hints, which are out of scope, and a
+tested solver that nothing calls is weight carried for a feature nobody asked for. When hints
+arrive: bitmask backtracking, run once per `n` and cached.
 
 **Why.** For one solution the cheapest solver is the one you rarely run — precompute and
 cache. Bitmask keeps that single run fast. The explicit formula is a real bug surface for
@@ -64,8 +65,8 @@ queens, or fall back to set-based backtracking.
 
 ## D3 — State management: MVI for Game, MVVM for Setup (v1)
 
-**Decision.** **MVI on Game, MVVM on Setup.** The Scores screen (deferred) is MVVM when it
-lands.
+**Decision.** **MVI on Game, MVVM on Setup.** Best times are out of scope, so there is no
+Scores screen; were one built it would be MVVM, being a list read from a repository.
 
 **Why.** Game is a state machine with many discrete actions and one-shot effects, and is
 the screen extended live — MVI's "one action, one reducer branch" uniformity pays off.
@@ -92,31 +93,38 @@ build times.
 
 ---
 
-## D5 — Constraints: conflicts soft, occupancy/blocked/fixed hard
+## D5 — Conflicts are soft, and impossible actions are ignored rather than refused
 
-**Decision.** Conflicts are **soft** (placed and highlighted, never refused). Occupied
-cells toggle-remove; **blocked** and **fixed** cells are **hard** (tap rejected with
-feedback). `BLOCKED`/`FIXED` are produced only by extensions, but the enum and the reject
-path exist from v1.
+**Decision.** A queen under attack is **placed and highlighted, never refused**; tapping her
+again takes her back. There is **no hard rule at all** in this scope — no `canPlace`, no reject
+path, and `CellStatus` has three values — because nothing in the brief forbids a square.
 
-**Why.** Standard N-Queens UX (place freely, see conflicts), and it isolates the extension
-point: variants with given/forbidden cells plug into the hard path (`canPlace`), leaving
-the soft highlight path untouched.
+An action that cannot be carried out — a tap outside the board, a board too small to have a
+solution — **leaves the state unchanged**. `reduce` is total: no input can make it throw. The
+game route holds the same line: a size it cannot play sends the player back to Setup instead of
+raising, so neither a deep link nor a back stack restored after the process died can crash the
+app.
 
-**Revisit if.** A variant needs conflicts to be hard — flip one policy flag.
+**Why.** Placing freely and seeing the conflicts is how the puzzle is played. Building the
+reject path before a variant needs it would be a branch nothing takes and no test could justify.
+
+**Cost, accepted.** Blocked or given squares are therefore *not* a one-line change: they touch
+`GameState` (a field), `reduce` (a branch), `CellStatus` (values) and `snapshotOf`. Four places,
+not one — better stated plainly than claimed as an isolation that does not exist.
 
 ---
 
-## D6 — Animations: Rive for the win, Compose for the rest
+## D6 — Animations: Rive for the win, Compose for the rest *(not built)*
 
 **Context.** The brief asks for placement and victory animation.
 
-**Decision.** **Rive drives the victory celebration** (one `.riv`, trigger `celebrate`),
-in v1. **Placement bounce and conflict shake are Compose** (per-cell, cheap, no asset).
-**Compose-native celebration is the fallback** if the `.riv` is not ready.
+**Decision, for when the game screen exists.** **Rive drives the victory celebration** (one
+`.riv`, trigger `celebrate`). **Placement bounce and conflict shake are Compose** (per-cell,
+cheap, no asset). **Compose-native celebration is the fallback** if the `.riv` is not ready.
+Nothing of this is built: there is no Rive dependency and no `.riv` in the repository.
 
 **Why.** Matches the reviewers' stack where it has the most payoff (full-screen win) with a
-single asset, and keeps the domain animation-agnostic (only the `ui` layer maps effect →
+single asset, and keeps the domain animation-agnostic (only the presentation layer maps effect →
 Rive input). Per-cell effects are a poor fit for one shared Rive artboard, so they stay in
 Compose.
 
@@ -132,11 +140,13 @@ confetti file can serve as a placeholder.
 
 ## D7 — Dependency injection: Hilt
 
-**Decision.** **Hilt.**
+**Decision.** **Hilt, when there is a dependency to inject — not yet.** `SetupViewModel` has no
+collaborators, so a container would hold nothing. The first real binding is `LineRules` for the
+game screen.
 
-**Why.** Standard on modern Android, integrates with Compose and ViewModel, and makes the
-swappable seams (`PuzzleRules`, `Solver`, future repositories) explicit bindings. Manual DI
-would be fine for this size but Hilt reads as production-idiomatic.
+**Why wait.** Wiring a framework before anything needs it produces annotations a reviewer has to
+read past to find the code. Meanwhile the seam is kept honest a cheaper way: `conflicts` and
+`snapshotOf` take rules with **no default**, so no call site can silently assume N-Queens.
 
 **Revisit if.** Annotation-processing cost becomes a problem — Koin is the fallback.
 
@@ -150,29 +160,36 @@ version is a pure constant-factor change to reach for only if measured.
 
 ---
 
-## D9 — Testing: pairwise oracle, golden counts, gated ViewModel + Compose UI
+## D9 — Testing: a pairwise oracle, and gates that can actually fail
 
-**Decision.** Validate the fast paths against the pairwise `attacks` **oracle**; validate
-the solver against **known solution counts** (OEIS A000170, incl. n=5→10). **ViewModel
-coverage is gated**; **Compose UI tests** assert the board's place/conflict/win rendering;
-screen rendering beyond that is a **recorded manual emulator pass**, since `check` does not
-launch the app.
+**Decision.** Validate conflict detection against the pairwise `attacks` **oracle** over seeded
+random boards. Gate the domain at **90% line and 90% branch**, naming both counters, and gate
+`*ViewModel*` classes at **85% line**. When a solver is built, check it against the known
+solution counts (OEIS A000170). Compose UI tests arrive with the board they would assert;
+screen rendering beyond that is checked by hand on an emulator, since `check` does not launch
+the app.
 
-**Why.** The oracle is simple enough to trust and catches divergence in the fast code; the
-solution counts are a real external fixture. Gating ViewModel coverage and adding Compose
-UI tests closes the "green check but untested UI" gap the alignment review flagged.
+**Why.** The oracle is simple enough to trust and catches divergence in the fast code. Naming
+the counters matters more than it looks: JaCoCo measures *instructions* by default, which a
+branch-heavy predicate can satisfy while half its outcomes go untried.
+
+**A gate that cannot fail is worse than no gate**, because it sits on the list and buys
+confidence it has not earned. Three ways this happens, all guarded against here: applying
+`dependency-analysis` to the root project alone, which analyses nothing; a JaCoCo limit with no
+`counter`, which measures instructions rather than the lines and branches it appears to; and a
+coverage rule over a class set that turns out to be empty, which passes without measuring
+anything, or is skipped outright because its coverage data has moved — so
+`viewModelCoverageInputs` checks both of the gate's inputs and fails before the floor is read.
 
 ---
 
 ## D10 — Hints and solvability deferred
 
-**Decision.** The `Solver` exists and is tested, but "hint that guarantees solvability" and
-"dead-end warning" are **deferred extensions**, not v1 features; cheap `safeCells`
-highlighting is available when the UI is added.
+**Decision.** Hints, "dead-end" warnings and the solver they rest on are **deferred**, together.
+Neither the feature nor its machinery is built.
 
-**Why.** Guaranteed-solvable hints need solver + UI wiring beyond a comfortable window.
-Keeping the solver ready but the feature deferred matches v1 scope while leaving the seam
-open.
+**Why.** A guaranteed-solvable hint needs a solver and its own UI. Building the solver first
+would leave tested code with no caller, so the seam is left open and nothing is written for it.
 
 ---
 
@@ -182,3 +199,60 @@ open.
 
 **Why.** A conscious omission for a take-home: the deliverable is source + a short demo
 video, not a Play Store artifact. Noted so it is a decision, not a gap.
+
+
+---
+
+## D12 — What the layering actually enforces
+
+**Context.** `:app` is laid out one package per screen, each holding its own `domain`,
+`presentation` and — when it needs one — `data`, with the shared theme beside them. It reads as
+Clean Architecture.
+
+**Decision.** Keep the layout, and **state plainly which boundary is enforced and which is a
+convention.**
+
+- `:core:domain` is a separate Gradle module with no Android on its compile classpath. The
+  compiler makes a violation impossible. This one is real.
+- A feature's `domain` and `presentation` are packages. Nothing stops a composable from doing
+  arithmetic a view model should do, and the view models import
+  `androidx.compose.runtime.mutableStateOf`, so `presentation` is not a framework-free layer.
+
+**Why say so.** The valuable boundary here is not the one the folder names advertise: it is
+`SetupScreen` (bound to a view model) split from `SetupContent` (everything passed in), which is
+what lets each state be drawn by passing values in: `SetupContent` takes its state as a
+parameter, and the two previews render it without a view model. Not *only* values, though — it
+reads the board palette from a `CompositionLocal` that throws outside `NQueensTheme`, so anything
+rendering it has to wrap it, and that dependency is not in its signature. Claiming that every boundary
+is equally strong invites the one question a reviewer is certain to ask.
+
+**Not enforceable as written.** A Konsist or ArchUnit rule asserting "`presentation` may not
+import Compose" would make the convention a boundary, but the view models hold their state in
+`mutableStateOf` (D13), which is Compose. The package layout is a reading aid; the module is the
+wall.
+
+
+---
+
+## D13 — Screen state: Compose's `mutableStateOf`, not `StateFlow`
+
+**Options.** `mutableStateOf` (Compose's snapshot state); `StateFlow` (framework-neutral);
+`LiveData` (older, no reason to reach for it here).
+
+**Decision.** **`mutableStateOf`**, in every view model, Setup and Game alike.
+
+**Why.** The screen reads the value and recomposes, with no collection to set up, no coroutine
+to keep alive and no `collectAsStateWithLifecycle` at the call site. Tests read the property
+directly. For a game whose state changes on a tap, that is the whole job.
+
+**Costs, accepted.**
+- The presentation layer imports `androidx.compose.runtime`, so it is not framework-free and
+  cannot be policed as such (D12).
+- The elapsed timer on the game screen is a coroutine in `viewModelScope` writing into
+  `mutableStateOf`, rather than a flow that is naturally a stream.
+- Should a view model ever need to be driven by something other than Compose, this is the
+  decision to revisit first.
+
+**Note on the pattern split.** Setup is MVVM and Game is MVI (D3): that difference is about how
+changes are *expressed* — named methods versus one `onAction`. How the state is *observed* is a
+separate axis, and it is the same on both screens.

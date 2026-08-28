@@ -1,4 +1,4 @@
-package com.mdimitrov.nqueens.ui.theme
+package com.mdimitrov.nqueens.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -23,9 +23,9 @@ internal data class BoardColors(
 )
 
 internal val LocalBoardColors =
-    staticCompositionLocalOf<BoardColors> { error("BoardColors used outside NqueensTheme") }
+    staticCompositionLocalOf<BoardColors> { error("BoardColors used outside NQueensTheme") }
 
-internal object NqueensTheme {
+internal object NQueensTheme {
     val board: BoardColors
         @Composable get() = LocalBoardColors.current
 }
@@ -77,14 +77,14 @@ private val DarkBoard =
     )
 
 @Composable
-internal fun NqueensTheme(
+internal fun NQueensTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(LocalBoardColors provides if (darkTheme) DarkBoard else LightBoard) {
         MaterialTheme(
             colorScheme = if (darkTheme) DarkScheme else LightScheme,
-            typography = NqueensTypography,
+            typography = NQueensTypography,
             content = content,
         )
     }

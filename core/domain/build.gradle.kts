@@ -41,9 +41,19 @@ tasks.jacocoTestReport {
 
 // Coverage floor for the domain: the logic lives here, so it is gated hardest.
 tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.test)
     violationRules {
         rule {
-            limit { minimum = "0.90".toBigDecimal() }
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.90".toBigDecimal()
+            }
+            limit {
+                counter = "BRANCH"
+                value = "COVEREDRATIO"
+                minimum = "0.90".toBigDecimal()
+            }
         }
     }
 }

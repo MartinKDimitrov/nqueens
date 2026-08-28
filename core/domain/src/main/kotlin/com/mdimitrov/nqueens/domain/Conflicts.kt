@@ -8,30 +8,24 @@ package com.mdimitrov.nqueens.domain
  */
 public fun conflicts(
     queens: Set<Cell>,
-    rules: LineRules = NQueensLines,
+    rules: LineRules,
 ): Set<Cell> {
-    val occupancy = HashMap<Line, Int>()
+    val linesByQueen = queens.associateWith(rules::linesThrough)
 
-    for (queen in queens) {
-        for (line in rules.linesThrough(queen)) {
+    val occupancy = HashMap<Line, Int>()
+    for (lines in linesByQueen.values) {
+        for (line in lines) {
             occupancy[line] = (occupancy[line] ?: 0) + 1
         }
     }
 
-    return queens.filterTo(mutableSetOf()) { queen ->
-        rules.linesThrough(queen).any { occupancy.getValue(it) > 1 }
-    }
+    return linesByQueen
+        .filterValues { lines -> lines.any { occupancy.getValue(it) > 1 } }
+        .keys
 }
 
 /** How many queens are still to be placed on a board. */
 public fun queensLeft(
     queens: Set<Cell>,
     size: Int,
-): Int = size - queens.size
-
-/** Solved when the board holds [size] queens and none of them is threatened. */
-public fun isSolved(
-    queens: Set<Cell>,
-    size: Int,
-    rules: LineRules = NQueensLines,
-): Boolean = queens.size == size && conflicts(queens, rules).isEmpty()
+): Int = (size - queens.size).coerceAtLeast(0)

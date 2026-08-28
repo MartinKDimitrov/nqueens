@@ -2,13 +2,14 @@ package com.mdimitrov.nqueens.domain
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BoardSnapshotTest {
     @Test
     fun `an empty board is all empty squares with every queen still to place`() {
-        val snapshot = snapshotOf(GameState(size = 4))
+        val snapshot = snapshotOf(GameState(size = 4), NQueensLines)
 
         assertEquals(16, snapshot.statuses.size)
         assertTrue(snapshot.statuses.all { it == CellStatus.EMPTY })
@@ -18,7 +19,7 @@ class BoardSnapshotTest {
 
     @Test
     fun `a lone queen is marked without conflict and lowers the counter`() {
-        val snapshot = snapshotOf(GameState(size = 4, queens = setOf(Cell(1, 2))))
+        val snapshot = snapshotOf(GameState(size = 4, queens = setOf(Cell(1, 2))), NQueensLines)
 
         assertEquals(CellStatus.QUEEN, snapshot.statusAt(row = 1, col = 2))
         assertEquals(3, snapshot.queensLeft)
@@ -27,7 +28,7 @@ class BoardSnapshotTest {
 
     @Test
     fun `row and column are not transposed`() {
-        val snapshot = snapshotOf(GameState(size = 4, queens = setOf(Cell(0, 1))))
+        val snapshot = snapshotOf(GameState(size = 4, queens = setOf(Cell(0, 1))), NQueensLines)
 
         assertEquals(CellStatus.QUEEN, snapshot.statusAt(row = 0, col = 1))
         assertEquals(CellStatus.EMPTY, snapshot.statusAt(row = 1, col = 0))
@@ -35,16 +36,16 @@ class BoardSnapshotTest {
 
     @Test
     fun `queens that attack each other are both marked as conflicting`() {
-        val snapshot = snapshotOf(GameState(size = 4, queens = setOf(Cell(0, 0), Cell(0, 3))))
+        val snapshot = snapshotOf(GameState(size = 4, queens = setOf(Cell(0, 0), Cell(0, 3))), NQueensLines)
 
         assertEquals(CellStatus.QUEEN_CONFLICT, snapshot.statusAt(row = 0, col = 0))
         assertEquals(CellStatus.QUEEN_CONFLICT, snapshot.statusAt(row = 0, col = 3))
     }
 
     @Test
-    fun `a queen out of reach of the others stays unmarked`() {
+    fun `a queen out of reach of the others is not flagged as conflicting`() {
         val queens = setOf(Cell(0, 0), Cell(0, 3), Cell(3, 1))
-        val snapshot = snapshotOf(GameState(size = 4, queens = queens))
+        val snapshot = snapshotOf(GameState(size = 4, queens = queens), NQueensLines)
 
         assertEquals(CellStatus.QUEEN_CONFLICT, snapshot.statusAt(row = 0, col = 0))
         assertEquals(CellStatus.QUEEN_CONFLICT, snapshot.statusAt(row = 0, col = 3))
@@ -54,7 +55,7 @@ class BoardSnapshotTest {
     @Test
     fun `a solved board reports itself solved with nothing left to place`() {
         val solution = setOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2))
-        val snapshot = snapshotOf(GameState(size = 4, queens = solution))
+        val snapshot = snapshotOf(GameState(size = 4, queens = solution), NQueensLines)
 
         assertTrue(snapshot.isSolved)
         assertEquals(0, snapshot.queensLeft)
@@ -65,9 +66,20 @@ class BoardSnapshotTest {
     @Test
     fun `a full board that is not a solution is not solved`() {
         val diagonal = setOf(Cell(0, 0), Cell(1, 1), Cell(2, 2), Cell(3, 3))
-        val snapshot = snapshotOf(GameState(size = 4, queens = diagonal))
+        val snapshot = snapshotOf(GameState(size = 4, queens = diagonal), NQueensLines)
 
         assertFalse(snapshot.isSolved)
         assertEquals(0, snapshot.queensLeft)
+    }
+
+    @Test
+    fun `a square off the board is refused, rather than wrapping into the next row`() {
+        val snapshot = snapshotOf(GameState(size = 4), NQueensLines)
+
+        for ((row, col) in listOf(0 to 4, 4 to 0, -1 to 0, 0 to -1)) {
+            assertFailsWith<IllegalArgumentException>("row $row, col $col") {
+                snapshot.statusAt(row = row, col = col)
+            }
+        }
     }
 }

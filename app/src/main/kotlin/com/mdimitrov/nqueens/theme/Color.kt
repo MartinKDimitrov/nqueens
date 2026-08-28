@@ -1,4 +1,4 @@
-package com.mdimitrov.nqueens.ui.theme
+package com.mdimitrov.nqueens.theme
 
 import androidx.compose.ui.graphics.Color
 

@@ -25,9 +25,11 @@ Suggested message: `docs: project, tradeoffs, plan and design reference`.
 
 ## The `check` command
 
-One command runs everything a commit must pass; CI runs the same command.
+One command runs everything a commit must pass. There is no CI: the pre-commit hook is what
+runs it.
 
-`make check` → `./gradlew check buildHealth`, in fail-not-rewrite mode:
+`make check` → `./gradlew check buildHealth`, in fail-not-rewrite mode. Every row below fails
+on a real defect:
 
 | Concern              | Tool                                                             |
 |----------------------|-----------------------------------------------------------------|
@@ -35,27 +37,26 @@ One command runs everything a commit must pass; CI runs the same command.
 | static analysis      | detekt (built upon its default ruleset)                         |
 | type strictness      | Kotlin `allWarningsAsErrors`; `explicitApi()` on `:core:domain` |
 | tests                | JUnit4 + `kotlin.test`; property tests use a **seeded** `Random`|
-| coverage floor       | JaCoCo `jacocoTestCoverageVerification` — fails the build       |
-| Compose UI tests     | `createComposeRule` board render tests (added in the Game steps)|
-| dependency hygiene   | `com.autonomousapps.dependency-analysis` `buildHealth` (unused/undeclared) |
+| coverage floor       | `jacocoTestCoverageVerification` for the domain, `viewModelCoverageInputs` + `viewModelCoverageVerification` for `:app` |
+| dependency hygiene   | `dependency-analysis` `buildHealth`, applied to **every module**, failing on any advice |
+| Android resources    | `lint` with `warningsAsErrors`; version advisories excluded            |
 
-**Vulnerability audit (deferred from the commit gate).** OWASP dependency-check needs an
-NVD API key and a large local database, which makes it too slow and flaky for a
-per-commit gate. It is provided as a separate `make audit` target and is not part of
-`check`. A conscious deviation from the "everything in check" rule, recorded here.
+**Vulnerability audit (not built).** OWASP dependency-check needs an NVD API key and a large
+local database, which makes it too slow and flaky for a per-commit gate. It is not wired at all
+rather than wired and skipped. A conscious deviation from the "everything in check" rule.
 
-Coverage floors: **`:core:domain` 90%** (line + branch); **`:app` ViewModel packages 85%**
-(gated via a JaCoCo rule on `**/*ViewModel*`); other `:app` code reported, not gated.
-Floors activate once each target has code.
+Coverage floors: **`:core:domain` 90% line and 90% branch**, both counters named explicitly
+because JaCoCo otherwise measures instructions; **`*ViewModel*` classes in `:app` 85% line**.
+No other `:app` code is measured at all: there is no `jacocoTestReport` in `:app`, so the
+screens appear in no coverage report. They are checked by running them.
 
-The gate runs `check` only. The template's second rule — refusing a commit that changes code
-without documenting it — was removed for this project.
+The hook in `.githooks/pre-commit` runs `check` and nothing else. It began as a template that
+also refused a commit changing code without documenting it; that rule was taken out, so the file
+in this repository is the one to use — copying the template over it would put the rule back.
 
-Commit gate (run once, Phase 0):
+Point git at it once:
 
 ```bash
-mkdir -p .githooks && cp ~/.claude/templates/pre-commit .githooks/
-chmod +x .githooks/pre-commit
 git config core.hooksPath .githooks
 ```
 
@@ -65,15 +66,16 @@ git config core.hooksPath .githooks
 
 **Step 0.1 — Gradle, modules, `check`, commit gate.** *(built)*
 - Gradle wrapper pinned to 8.11.1; `settings.gradle.kts` with `:core:domain`, `:app`.
-- `gradle/libs.versions.toml`: AGP 8.7.3, Kotlin 2.0.21, androidx-activity, JUnit, detekt,
-  Spotless, dependency-analysis. Compose, Hilt and Rive are added in the phases that use them.
-- Root build wiring Spotless (all modules) + detekt (code modules) + dependency-analysis
-  (root); `:core:domain` gets JaCoCo with a 90% floor; `make check` → `./gradlew check buildHealth`.
-- `:app` is a minimal Android shell (empty `ComponentActivity`); `:core:domain` is a pure
-  Kotlin library with a smoke test. Both compile under `allWarningsAsErrors`.
+- `gradle/libs.versions.toml` starts with AGP 8.7.3, Kotlin 2.0.21, androidx-activity, JUnit,
+  detekt, Spotless and dependency-analysis; everything else joins it in the step that first
+  needs it.
+- Root build wiring Spotless and detekt across the modules, and dependency-analysis into each
+  of them — applied to the root alone it reports on nothing. `:core:domain` gets JaCoCo floors;
+  `make check` → `./gradlew check buildHealth`.
+- `:app` starts as a minimal Android shell and `:core:domain` as an empty pure-Kotlin library.
+  Both compile under `allWarningsAsErrors`.
 - Commit gate hook installed (`core.hooksPath = .githooks`).
 - **Check:** `make check` is green on the skeleton (verified).
-- **Commit:** `chore: gradle skeleton, modules and check gate`.
 
 ---
 
@@ -83,15 +85,13 @@ git config core.hooksPath .githooks
 - `:core:domain`: `Cell` (with both diagonal identifiers), `fun interface PuzzleRules`,
   `NQueens` — the pairwise reference.
 - Tests: each of the four lines of attack, a non-attacking pair, symmetry, the identity pair.
-- **Commit:** `Puzzle rules`.
 
 **Step 1.2 — Conflict detection by counting line occupancy.** *(built)*
-- `LineKind`/`Line`/`LineRules` with `NQueensLines`; `conflicts()`, `queensLeft()`,
-  `isSolved()`. Counting replaces the four fixed axes the plan first assumed, so the geometry
-  stays in the rules rather than in the validator (TRADEOFFS D1).
+- `LineKind`/`Line`/`LineRules` with `NQueensLines`; `conflicts()` and `queensLeft()`. Conflicts
+  are found by counting occupancy per line, so the geometry stays in the rules rather than in the
+  validator (TRADEOFFS D1).
 - Tests: worked examples plus a **property test vs the pairwise oracle** over 500 seeded
   random boards.
-- **Commit:** `feat(domain): counter-based conflict validation`.
 
 ---
 
@@ -100,19 +100,17 @@ git config core.hooksPath .githooks
 **Step 2.1 — `GameState`, `GameAction`, `reduce`.** *(built)*
 - `GameState(size, queens)` with its invariants; sealed `GameAction` (`Toggle`, `Reset`,
   `NewGame`); pure `reduce(state, action)`.
-- Scope narrowed against the original plan: no `history`/`Undo`, no `fixed`/`blocked`, no
-  reject path. Nothing in scope produces them, and unused fields in the domain cost more than
-  absent ones. Each is one member plus one reducer branch when it is wanted.
-- `reduce` takes no rules: conflicts are soft, so a move is never refused for being attacked.
+- No `history`/`Undo`, no `fixed`/`blocked`, no reject path: nothing in scope produces them, and
+  each is one member plus one reducer branch when it is wanted.
+- `reduce` takes no rules and is total: conflicts are soft, so a move is never refused for being
+  attacked, and an impossible action leaves the state unchanged rather than throwing.
 - Tests: table-driven `state × action → expected state`; invariants; purity.
-- **Commit:** `feat(domain): pure reducer and game state`.
 
 **Step 2.2 — Board snapshot and cell status.** *(built)*
 - `CellStatus` (`EMPTY`, `QUEEN`, `QUEEN_CONFLICT`); `BoardSnapshot` (row-major grid,
-  queens left, solved) produced by `snapshotOf(state)` — computed once per state change so
+  queens left, solved) produced by `snapshotOf(state, rules)` — computed once per state change so
   the UI decides nothing.
 - Tests: empty, lone, conflicting and solved boards; row/column not transposed.
-- **Commit:** `feat(domain): board snapshot and cell status`.
 
 ---
 
@@ -129,51 +127,49 @@ git config core.hooksPath .githooks
 
 ## Phase 4 — App scaffold
 
-**Step 4.1 — Hilt, navigation, theme, design tokens.**
-- `:app`: `Application` with Hilt; Compose Navigation host with `setup` and `game`
-  destinations (screens stubbed); Material theme; `NQueensColors`/`NQueensTypography` from
-  `design/tokens.json` via `CompositionLocal` (light + dark).
-- Hilt module binding `LineRules` (→ `NQueensLines`).
-- **Check:** app builds and launches to an empty Setup route (recorded manual pass).
-- **Commit:** `feat(app): hilt, navigation, theme and design tokens`.
+**Step 4.1 — Navigation, theme, design tokens.** *(built)*
+- `:app`: Compose Navigation host with `setup` and `game` destinations (the game one stubbed);
+  Material theme carrying `NQueensTypography`, with the
+  board's own colours beside it in `BoardColors` through a `CompositionLocal` (light + dark).
+  Both are transcribed from `design/tokens.json` by hand; nothing reads it at build time.
+- **Check:** the app builds and opens on the Setup screen, checked by hand on an emulator.
 
 ---
 
 ## Phase 5 — Setup screen (MVVM) — *first in user flow*
 
-**Step 5.1 — Setup ViewModel + UI.**
-- Board-size input (`n ≥ 4`, validated) and a variant selector (single option: Queens);
-  "Start" navigates to Game with the chosen `n`.
-- Tests: ViewModel — invalid `n` rejected, valid selection emits start (coverage-gated).
-- **Check / Commit:** `feat(setup): board size selection`.
+**Step 5.1 — Setup view model and screen.** *(built)*
+- A stepper between `MIN_BOARD_SIZE` and `LARGEST_PLAYABLE_BOARD`, a board drawn at the chosen size, a
+  variant row with the one puzzle that exists, and a "Start" that carries the size to the game
+  route.
+- Tests: the view model clamps at both ends and starts at the default; coverage-gated at 85%.
+  The screen itself has no automated test — `check` does not run a composable.
 
 ---
 
 ## Phase 6 — Game screen (MVI)
 
 **Step 6.1 — Board rendering + tap → toggle.**
-- Dynamic `n×n` Compose board; `GameViewModel` exposing `StateFlow<GameUiState>` and
-  `onAction`; tap dispatches `Toggle`; queens rendered.
+- Hilt arrives here: `GameViewModel` is the first class with a dependency to inject
+  (`LineRules` → `NQueensLines`).
+- Dynamic `n×n` Compose board; `GameViewModel` exposing `GameUiState` as `mutableStateOf`
+  (TRADEOFFS D13) and one `onAction`; tap dispatches `Toggle`; queens rendered.
 - Tests: ViewModel (tap places/removes; maps to `GameUiState`); **Compose UI** (queen
   renders on tapped cell).
-- **Check / Commit:** `feat(game): interactive board with place/remove`.
 
 **Step 6.2 — Conflict highlight + queens-left counter.**
 - `QUEEN_CONFLICT` styling; live counter; Compose conflict shake.
 - Tests: ViewModel (conflicting placement flagged; counter decrements); **Compose UI**
   (conflict styling shown).
-- **Check / Commit:** `feat(game): real-time conflict highlight and counter`.
 
 **Step 6.3 — Elapsed timer + reset.**
 - Elapsed-time display (not persisted); `Reset` action clears to `fixed` and restarts the
   timer.
 - Tests: timer selector; reset clears board and timer.
-- **Check / Commit:** `feat(game): elapsed timer and reset`.
 
 **Step 6.4 — Win state + celebration effect.**
 - Win detection → `GameEffect.Solved` (Channel, one-shot); win overlay.
 - Tests: ViewModel (solved board emits Solved exactly once); **Compose UI** (win overlay).
-- **Check / Commit:** `feat(game): win state and overlay`.
 
 *(The design reference shows a bottom bar with Undo and Hint. Neither ships: tapping a queen
 already removes it, so Undo corrects nothing that a second tap does not, and hints depend on
@@ -184,20 +180,19 @@ the deferred solver. The bar is left out rather than shown with dead buttons.)*
 ## Phase 7 — Rive victory animation
 
 **Step 7.1 — Rive glue with Compose fallback.**
-- `ui` maps `GameEffect.Solved` → Rive state-machine input `celebrate` (artboard
+- The presentation layer maps `GameEffect.Solved` → Rive state-machine input `celebrate` (artboard
   `NQueens`, machine `game`); Compose-native celebration behind a flag if the `.riv` is
   absent (TRADEOFFS D6).
 - Tests: **unit test of the pure `GameEffect → Rive input` mapping**; **Compose UI** test
-  that the fallback path renders. Visual polish is a recorded manual note.
-- **Commit:** `feat(app): rive victory celebration`.
+  that the fallback path renders. Visual polish is judged by eye.
 
 ---
 
 ## Phase 8 — Polish and handover
 
-**Step 8.1 — Accessibility pass + README.**
+**Step 8.1 — Accessibility pass.** *(partly built: the README is written and the Setup screen
+carries content descriptions; the board's are not, and there is no sound.)*
 - Content descriptions for cells; optional SFX for placement/win; `README.md`
   (build/test/run + architecture decisions, pointing to `docs/`).
-- **Check / Commit:** `docs: readme and accessibility polish`.
 
 ---

@@ -1,162 +1,161 @@
 # N-Queens Puzzle — Project Description
 
-## 1. Purpose and context
+A description of what this repository contains today. Work that is absent is named as absent —
+§3 for what the assignment asks and §4 for what was left out on purpose, with §8 giving the
+order it would arrive in.
+
+## 1. Purpose
 
 An Android puzzle game based on the [N-Queens problem](https://en.wikipedia.org/wiki/Eight_queens_puzzle):
-the player places `n` queens on an `n×n` board so that no two threaten each other
-(no shared row, column, or diagonal).
+the player places `n` queens on an `n×n` board so that no two threaten each other — no shared
+row, column, or diagonal.
 
-Two goals shape the design:
+The project is a take-home assignment followed by an interview in which the codebase will be
+extended live. Two goals follow: the game itself, and an architecture whose extension points are
+already open, so that a new requirement lands in one predictable place (§7).
 
-1. **Scope is strictly the brief** — the smallest correct game that satisfies it.
-2. **The architecture keeps its extension seams open**, so that a new requirement maps to
-   one predictable place in the code (§7) rather than a rewrite.
+Language: Kotlin. UI: Jetpack Compose. Build: Gradle with a version catalog.
 
-Language: Kotlin. UI: Jetpack Compose. DI: Hilt. Animations: [Rive](https://rive.app).
+## 2. What works today
 
-## 2. Gameplay scope (v1)
+- **Setup screen.** The board drawn at the chosen size, above a stepper that moves between 4
+  and 12 and starts at 8. A variant row shows the only puzzle that exists (Queens). "Start"
+  carries the size to the game route.
+- **The full game logic, with no screen yet.** Placing and removing queens, live conflict
+  detection, the queens-left count and the solved verdict are implemented and tested in
+  `:core:domain`. Nothing in the app calls them yet.
 
-Required by the assignment:
+The game route is a placeholder that prints the chosen size. The board is not playable.
 
-- Player selects a board size, `n ≥ 4` (below 4 there are no solutions).
-- An interactive `n×n` board is rendered.
-- Tap to place / remove a queen.
-- Real-time validation: conflicting queens are highlighted as the board changes.
-- A win state is shown when the puzzle is solved.
+## 3. What the assignment asks for that is not built
 
-Nice-to-haves included in v1:
+- The **game screen**: the interactive board, conflict highlighting, the queens-left counter,
+  reset, the elapsed timer and the win state. The domain behind the board — placing, conflicts,
+  the counter and the solved verdict — is written and tested; the timer belongs to the view model
+  and does not exist yet either (§8).
+- **Placement and victory animation**, and with it Rive.
 
-- Counter of queens left.
-- Restart / reset.
-- Elapsed-time display during play (not persisted in v1).
-- Queen-placement and victory animation (§4.5): the victory celebration via Rive, the
-  per-cell placement/conflict feedback via Compose.
+## 4. What is deliberately out of scope
 
-A puzzle-**variant selector** ships on the Setup screen showing a single option (Queens).
-It carries no behaviour beyond N-Queens; it exists so that adding a variant is a
-domain-only change behind a UI that already expects it (§7).
+- Best times, and any persistence at all.
+- Hints and dead-end detection, and the solver they would need. A tested solver that nothing
+  calls is weight carried for a feature nobody asked for.
+- Undo. Tapping a queen already takes her back, so undo corrects nothing a second tap does not.
+- Accounts, online leaderboards, cloud sync, multiplayer.
 
-## 3. Out of scope
+## 5. Architecture
 
-Deferred deliberately, each behind an open seam (§7):
+### 5.1 Central idea
 
-- **Best times / Scores screen** and any persistence (a repository seam).
-- **Saved game / resume** (a repository seam).
-- **Hints and dead-end detection** (the `Solver` exists and is tested, but has no UI, §4.4).
-- **Puzzle variants** (Rooks, Bishops, Amazons, toroidal, blocked cells, given queens).
-- Accounts, online/remote leaderboards, cloud sync, multiplayer.
+**A pure state machine, with the rules as a strategy.** The domain is framework-free and
+deterministic: `reduce(state, action)` returns the next state, and never throws. Every new
+behaviour is one more action and one more branch. Every puzzle *variant* is a new rules
+implementation, and the reducer does not change — conflicts are worked out separately, from the
+rules in play.
 
-## 4. Architecture overview
+### 5.2 Modules
 
-### 4.1 Central idea
+| Module         | Contains                                                                 | Depends on     |
+|----------------|--------------------------------------------------------------------------|----------------|
+| `:core:domain` | `Cell`, `GameState`, `GameAction`, `reduce`, `PuzzleRules`/`LineRules`, `conflicts`, `BoardSnapshot`/`snapshotOf`. Pure Kotlin, **no Android**. | —              |
+| `:app`         | One package per screen with its own layers — `setup/domain`, `setup/presentation` — plus a shared `theme/`. | `:core:domain` |
 
-**A pure state machine plus the rules as a strategy.** The domain is framework-free and
-deterministic: `reduce(state, action, rules) -> state`. Every new behaviour is a new
-action + one reducer branch (unit-testable in isolation), and every puzzle *variant* is a
-new rules implementation — the reducer never changes.
+`:core:domain` holds what every screen shares, including `MIN_BOARD_SIZE`: below four the
+puzzle has nothing to solve, which is a fact about it. A screen's own rules stay with the
+screen — `setup/domain` names the size the stepper starts on, and `LARGEST_PLAYABLE_BOARD`, beside
+`MainActivity`, names the largest board this app will play — both the stepper and the game
+route answer to it, and neither is something the puzzle cares about. The domain holds boards far larger — up to the point where one
+entry per square stops being a grid worth building.
 
-### 4.2 Modules (v1)
+The module boundary is the only layering the build enforces: `:core:domain` compiles against
+the Kotlin standard library alone, so the compiler cannot see Android from it. Inside `:app` the
+layers are packages held by convention; the view models keep their state in Compose's
+`mutableStateOf`, so `presentation` is not a framework-free layer (TRADEOFFS D12, D13).
 
-| Module         | Contains                                                        | Depends on     |
-|----------------|----------------------------------------------------------------|----------------|
-| `:core:domain` | `Cell`, `GameState`, `PuzzleRules`/`LineRules`, `conflicts`, `reduce`, selectors, `Solver`. Pure Kotlin, **no Android**. | —              |
-| `:app`         | Compose UI, ViewModels, Hilt wiring, Rive glue. Feature packages: `setup`, `game`. | `:core:domain` |
+### 5.3 Screens
 
-`:core:domain` as a separate module lets the compiler **forbid Android in the domain** —
-protecting testability and making the boundary visible. A `:core:data` module is added
-when persistence lands (Scores / saved game, §8); it is not needed for v1.
+| Screen    | State                          | Pattern | Why                                                     |
+|-----------|--------------------------------|---------|---------------------------------------------------------|
+| **Setup** | board size, in `SetupViewModel`| MVVM    | two inputs and a button; MVI would be ceremony          |
+| **Game**  | not built (§8)                 | MVI     | a real state machine, and the screen extended live      |
 
-### 4.3 Screens and per-screen pattern (v1)
+### 5.4 Dependency injection
 
-| Screen    | Responsibility                                                    | Pattern | Why                                                            |
-|-----------|------------------------------------------------------------------|---------|---------------------------------------------------------------|
-| **Setup** | choose `n` (≥4) and the (single-option) variant, start game      | MVVM    | two inputs and a button; MVI would be ceremony                |
-| **Game**  | top bar (counter, timer, reset) and the board; no bottom bar     | MVI     | a real state machine — many discrete actions + one-shot effects; this is where live extension happens |
+**None.** `SetupViewModel` has no collaborators, so `viewModel()` constructs it and a container
+would have nothing to hold. The seam that a container would guard is kept honest a cheaper way:
+`conflicts` and `snapshotOf` take their rules with **no default**, so no call site can quietly
+assume N-Queens. Hilt arrives with the game screen, which is where the first real binding is.
 
-Mixing is deliberate: MVI where behaviour is rich and will grow; MVVM where it is simple
-input. Victory celebration is a **one-shot effect** (Channel/SharedFlow), kept out of the
-render state so a recompose never re-fires it. (A Scores screen, MVVM, is added with
-persistence in §8.)
+## 6. The vocabulary of verdicts
 
-### 4.4 Dependency injection
-
-Hilt. Bindings of interest in v1:
-
-- `LineRules` — bound to `NQueensLines` (the single variant); a `@Binds`/qualifier seam for
-  future variants.
-- `Solver` — the bitmask solver, provided as a singleton; one solution per `n` computed
-  once and cached. Built and tested in v1; its UI (hints) is deferred (§3).
-
-### 4.5 Animations
-
-| Animation                         | Carrier | Trigger                                   |
-|-----------------------------------|---------|-------------------------------------------|
-| Victory celebration               | Rive    | `GameEffect.Solved → Rive input "celebrate"` |
-| Queen placement (bounce)          | Compose | placement recomposition                   |
-| Conflict (shake / glow)           | Compose | `CellStatus.QUEEN_CONFLICT`               |
-
-Rive contract: artboard `NQueens`, state machine `game`, trigger input `celebrate`. The
-domain knows nothing about Rive; only the `ui` layer maps effect → Rive input. The `.riv`
-asset is authored in the Rive editor (it cannot be generated from code); if it slips, the
-victory animation falls back to Compose (see TRADEOFFS D6).
-
-## 5. The vocabulary of verdicts
-
-The game answers several distinct questions; conflating them is the main design risk.
-The split is **hard rules** (the action is refused) vs **soft rules** (the action is
-allowed and flagged).
-
-| Question                              | Nature          | How it is expressed                        | Lives in  |
-|---------------------------------------|-----------------|--------------------------------------------|-----------|
-| "You cannot place here"               | hard            | `canPlace(cell)` → reducer rejects + feedback | reducer   |
-| "This move conflicts / doesn't solve" | soft            | `conflicts()` selector → highlight         | selector  |
-| "Does a solution still exist / dead end" | derived, costly | `Solver.hasSolution(state)`               | Solver    |
-| "Is it solved"                        | derived         | `isSolved()` = `n` queens and 0 conflicts  | selector  |
-| "Help / hint" (deferred UI)           | derived         | `safeCells()` cheap · `hintNextMove()` via Solver | selector / Solver |
-
-Types fixed for v1:
+| Question                   | Nature   | Where the answer comes from                 |
+|----------------------------|----------|---------------------------------------------|
+| "This move conflicts"      | soft     | `conflicts()` → `CellStatus.QUEEN_CONFLICT` |
+| "Is it solved"             | derived  | `BoardSnapshot.isSolved`                    |
+| "How many are left"        | derived  | `BoardSnapshot.queensLeft`                  |
+| "That move cannot be made" | ignored  | `reduce` returns the state unchanged        |
 
 ```kotlin
-enum class CellStatus { EMPTY, QUEEN, QUEEN_CONFLICT }
+public enum class CellStatus { EMPTY, QUEEN, QUEEN_CONFLICT }
 ```
 
-Conflicts are **soft**: a conflicting queen is placed and highlighted, never refused. Turning
-a soft rule hard is a one-line policy change, not a rewrite.
+Conflicts are **soft**: a queen under attack is placed and highlighted, never refused. Nothing
+in this scope can refuse a tap, so there is no reject path and no blocked or given squares. A
+move that cannot be carried out — a tap outside the board, a board too small to have a solution
+— leaves the state alone rather than throwing, so the reducer cannot crash the screen it drives.
 
-Nothing in this scope can refuse a tap, so there is no reject path and no `BLOCKED`/`FIXED`
-state: every tap either places or removes. The design legend documents those states for the
-variants that would produce them; the enum grows when one arrives.
-
-## 6. Testing strategy
-
-Logic is separated from UI precisely so it can be tested without a device.
-
-| Layer                | What is tested                                                        |
-|----------------------|----------------------------------------------------------------------|
-| Conflict validation  | fast counter path vs the **pairwise oracle** (`attacks`) on seeded random boards (property test) |
-| Solver               | solution counts vs **known golden values** (OEIS A000170: n=4→2, n=5→10, n=6→4, n=8→92) |
-| Reducer              | table-driven `state × action → expected state` cases                 |
-| Selectors            | `conflicts`, `queensLeft`, `isSolved` on hand-built boards            |
-| ViewModel            | intent → state/effect; **coverage-gated** (§ check)                   |
-| Compose UI           | board renders place / conflict / win states (`createComposeRule`)    |
-| Manual pass          | a recorded emulator pass per screen step (rendering is not gated by `check`) |
-
-A single `check` command (Gradle) runs format + lint + strict type checks + tests with
-coverage floors; CI runs the same command. Real fixtures (the golden solution counts) are
-part of the suite, not only author-invented inputs. Property tests use a **seeded**
-`Random` for reproducibility.
+The same holds one layer up: a board size arriving on the game route that the app cannot play
+sends the player back to Setup to choose one, rather than raising. Nothing exercises that branch
+— the stepper cannot produce such a size and there is no deep link — so it is read and reasoned
+about rather than tested. `NQueensNavHost` takes its controller as a parameter, which is what a
+test would need, but the test dependencies for driving a composable are not in the build.
 
 ## 7. Extension seams
 
-Every plausible request maps to one of five seams:
+| # | Kind of request           | Seam                                    | Domain touched? |
+|---|---------------------------|-----------------------------------------|-----------------|
+| 1 | new variant / rule        | new `LineRules`                         | new class only  |
+| 2 | new player action         | new `GameAction` + one `reduce` branch  | reducer only    |
+| 3 | new displayed information | new field on `BoardSnapshot`            | projection only |
+| 4 | new persistence           | a repository in the feature's `data`    | no              |
+| 5 | new presentation          | Compose + `UiState`                     | no              |
 
-| # | Kind of request              | Seam                                   | Domain touched? |
-|---|------------------------------|----------------------------------------|-----------------|
-| 1 | new variant / rule           | new `LineRules` (or `PuzzleRules`)     | new class only  |
-| 2 | new player action            | new `GameAction` + reducer branch      | reducer only    |
-| 3 | new displayed information    | new selector over `GameState`          | selector only   |
-| 4 | new persistence              | `Repository` interface + implementation (`:core:data`) | no |
-| 5 | new presentation             | Compose + `UiState` mapping            | no              |
+Seam 1 is the one the design is built around: `LineRules` supplies the lines a piece threatens
+along, and `conflicts` counts occupancy per line, so N-Rooks and N-Bishops are a few lines each
+and the validator is untouched.
 
-See `docs/TRADEOFFS.md` for the reasoning behind each decision and `docs/PLAN.md` for the
-step-by-step build.
+It carries the **threats** and not the **goal**. That the target is one piece per row lives in
+`queensLeft` and in `BoardSnapshot.isSolved`, not in the rules, so a puzzle counting to something
+other than `n` would touch those two as well. And "new class only" describes the domain: putting
+a variant in front of a player also means somewhere to choose it, which the Setup screen does not
+have — its variant row shows one puzzle and opens nothing.
+
+The seam covers puzzles whose threats *are* lines, which is every chess variant worth offering
+here. A puzzle threatening along something that is not a line — a knight's move — cannot be
+expressed as `LineRules` at all. `PuzzleRules` states such a rule pair by pair and the property
+test already uses it, but no production code consumes it: making one playable would mean adding
+a pairwise conflict function beside `conflicts` and choosing between the two. That is a change
+to the domain, not a new class in it.
+
+## 8. Next
+
+In order: the game board with tap-to-toggle and live conflict highlighting; the queens-left
+counter, reset and elapsed timer; the win state; the placement and victory animation. Hilt
+arrives with the game view model, which is the first class with a dependency worth injecting.
+
+## 9. Testing
+
+| Layer               | What is tested                                                              |
+|---------------------|------------------------------------------------------------------------------|
+| Conflict detection  | counting agrees with a **pairwise oracle** over 500 seeded random boards      |
+| Reducer             | table-driven `state × action → expected state`; that a move it cannot make leaves the state alone; that the state handed to it is not written through |
+| Board invariants    | a board below the minimum and a queen off the board are both refused          |
+| Projection          | per-cell statuses, the counter, the solved verdict, and that row and column are not transposed |
+| View model          | the size clamps at both ends; **85% line coverage gated** on `*ViewModel*`    |
+
+39 tests: 35 in `:core:domain`, 4 in `:app`. The Setup screen itself has no automated test —
+`check` does not run a composable, so the screens are checked by hand on an emulator.
+
+The gate is one command, `make check`, running formatting, static analysis, warnings-as-errors,
+the tests, both coverage floors, dependency hygiene and Android lint. Each row can actually
+fail; `docs/PLAN.md` describes them and `docs/TRADEOFFS.md` D9 explains why that matters.

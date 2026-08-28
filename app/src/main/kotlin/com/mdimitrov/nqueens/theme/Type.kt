@@ -1,4 +1,4 @@
-package com.mdimitrov.nqueens.ui.theme
+package com.mdimitrov.nqueens.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
@@ -6,7 +6,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 // The scale from design/tokens.json, mapped onto the Material slots the screens use.
-internal val NqueensTypography =
+internal val NQueensTypography =
     Typography(
         displaySmall =
             TextStyle(fontSize = 34.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold),
