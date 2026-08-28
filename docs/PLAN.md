@@ -79,44 +79,51 @@ git config core.hooksPath .githooks
 
 ## Phase 1 — Domain: rules and validation
 
-**Step 1.1 — `Cell` and `PuzzleRules` with the pairwise oracle.**
-- `:core:domain`: `Cell`, `fun interface PuzzleRules { fun attacks(a, b): Boolean }`,
-  `NQueens` implementation (the pairwise reference).
-- Tests: rows, columns, both diagonals; a non-attacking pair.
-- **Check / Commit:** `feat(domain): puzzle rules and pairwise oracle`.
+**Step 1.1 — `Cell` and `PuzzleRules` with the pairwise oracle.** *(built)*
+- `:core:domain`: `Cell` (with both diagonal identifiers), `fun interface PuzzleRules`,
+  `NQueens` — the pairwise reference.
+- Tests: each of the four lines of attack, a non-attacking pair, symmetry, the identity pair.
+- **Commit:** `Puzzle rules`.
 
-**Step 1.2 — Counter-based validator.**
-- HashMap counters over row, col, `r−c`, `r+c`; `conflicts()`, `isValidMove`,
-  `queensLeft`, `isSolved`.
-- Tests: **property test vs the oracle** over seeded random boards; edge cases.
-- **Check / Commit:** `feat(domain): counter-based conflict validation`.
+**Step 1.2 — Conflict detection by counting line occupancy.** *(built)*
+- `LineKind`/`Line`/`LineRules` with `NQueensLines`; `conflicts()`, `queensLeft()`,
+  `isSolved()`. Counting replaces the four fixed axes the plan first assumed, so the geometry
+  stays in the rules rather than in the validator (TRADEOFFS D1).
+- Tests: worked examples plus a **property test vs the pairwise oracle** over 500 seeded
+  random boards.
+- **Commit:** `feat(domain): counter-based conflict validation`.
 
 ---
 
 ## Phase 2 — Domain: state machine
 
-**Step 2.1 — `GameState`, `GameAction`, `reduce`.**
-- `GameState(size, queens, fixed, blocked, history)`; sealed `GameAction`
-  (`Toggle`, `Undo`, `Reset`, `NewGame`); `reduce(state, action, rules)`.
-- Hard rules in the reducer (`canPlace`; reject blocked/fixed); conflicts stay soft.
-- Tests: table-driven `state × action → expected state`, incl. rejects and undo.
-- **Check / Commit:** `feat(domain): pure reducer and game state`.
+**Step 2.1 — `GameState`, `GameAction`, `reduce`.** *(built)*
+- `GameState(size, queens)` with its invariants; sealed `GameAction` (`Toggle`, `Reset`,
+  `NewGame`); pure `reduce(state, action)`.
+- Scope narrowed against the original plan: no `history`/`Undo`, no `fixed`/`blocked`, no
+  reject path. Nothing in scope produces them, and unused fields in the domain cost more than
+  absent ones. Each is one member plus one reducer branch when it is wanted.
+- `reduce` takes no rules: conflicts are soft, so a move is never refused for being attacked.
+- Tests: table-driven `state × action → expected state`; invariants; purity.
+- **Commit:** `feat(domain): pure reducer and game state`.
 
-**Step 2.2 — Selectors and view verdicts.**
-- `TapResult`, `CellStatus`; selector producing the per-cell status grid + counter + solved.
-- Tests: hand-built boards → expected grids.
-- **Check / Commit:** `feat(domain): board selectors and cell status`.
+**Step 2.2 — Board snapshot and cell status.** *(built)*
+- `CellStatus` (`EMPTY`, `QUEEN`, `QUEEN_CONFLICT`); `BoardSnapshot` (row-major grid,
+  queens left, solved) produced by `snapshotOf(state)` — computed once per state change so
+  the UI decides nothing.
+- Tests: empty, lone, conflicting and solved boards; row/column not transposed.
+- **Commit:** `feat(domain): board snapshot and cell status`.
 
 ---
 
-## Phase 3 — Domain: solver
+## Phase 3 — Domain: solver *(not built)*
 
-**Step 3.1 — Bitmask solver with cache.**
-- `Solver` interface; bitmask backtracking; one solution per `n` cached; `hasSolution`,
-  `safeCells`, `hintNextMove` (built and tested; UI deferred).
-- Tests: **solution counts vs golden values** (OEIS A000170: 4→2, 5→10, 6→4, 8→92);
-  every produced solution re-checked against the oracle.
-- **Check / Commit:** `feat(domain): bitmask solver validated against known counts`.
+**Step 3.1 — Bitmask solver with cache.** *(deferred)*
+- A `Solver` exists only to serve hints and dead-end warnings, and neither is in scope. Built
+  now it would be tested code that nothing calls, so it waits for the feature that needs it.
+- When it lands: bitmask backtracking, one solution per `n` cached, verified against the known
+  solution counts (OEIS A000170: 4→2, 5→10, 6→4, 8→92) with every solution re-checked against
+  the pairwise oracle.
 
 ---
 
@@ -126,7 +133,7 @@ git config core.hooksPath .githooks
 - `:app`: `Application` with Hilt; Compose Navigation host with `setup` and `game`
   destinations (screens stubbed); Material theme; `NQueensColors`/`NQueensTypography` from
   `design/tokens.json` via `CompositionLocal` (light + dark).
-- Hilt modules binding `PuzzleRules` (→ `NQueens`) and `Solver`.
+- Hilt module binding `LineRules` (→ `NQueensLines`).
 - **Check:** app builds and launches to an empty Setup route (recorded manual pass).
 - **Commit:** `feat(app): hilt, navigation, theme and design tokens`.
 
@@ -168,10 +175,9 @@ git config core.hooksPath .githooks
 - Tests: ViewModel (solved board emits Solved exactly once); **Compose UI** (win overlay).
 - **Check / Commit:** `feat(game): win state and overlay`.
 
-**Step 6.5 — Undo in the UI.**
-- Wire the `Undo` action to a button.
-- Tests: ViewModel/UI — Undo dispatches and state restores the previous placement.
-- **Check / Commit:** `feat(game): undo`.
+*(The design reference shows a bottom bar with Undo and Hint. Neither ships: tapping a queen
+already removes it, so Undo corrects nothing that a second tap does not, and hints depend on
+the deferred solver. The bar is left out rather than shown with dead buttons.)*
 
 ---
 

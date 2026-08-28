@@ -1,0 +1,12 @@
+# Overrides on top of detekt's defaults. Only rules that clash with Compose conventions
+# are listed; everything else stays as detekt ships it.
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+
+style:
+  MagicNumber:
+    excludes:
+      - '**/test/**'
+      - '**/androidTest/**'
+      - '**/ui/theme/**'
