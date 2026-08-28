@@ -10,7 +10,7 @@ dependencyAnalysis = "2.6.1"
 androidxLifecycle = "2.8.7"
 composeBom = "2024.12.01"
 navigation = "2.8.5"
-
+robolectric = "4.14.1"
 
 [libraries]
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "androidxActivity" }
@@ -34,7 +34,11 @@ compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling
 navigation-common = { group = "androidx.navigation", name = "navigation-common", version.ref = "navigation" }
 navigation-runtime = { group = "androidx.navigation", name = "navigation-runtime", version.ref = "navigation" }
 navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
-
+compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+compose-ui-test = { group = "androidx.compose.ui", name = "ui-test" }
+robolectric-annotations = { group = "org.robolectric", name = "annotations", version.ref = "robolectric" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -37,6 +37,15 @@ android {
         compose = true
     }
 
+    // Robolectric runs the composables in the JVM, so the unit tests need the real resources.
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+
+        unitTests.all { test ->
+            test.enabled = test.name.contains("Debug")
+        }
+    }
+
     // Kotlin warnings already fail the build; Android's should too, or the project holds its
     // own code to one standard and its resources and manifest to another. The exceptions are
     // the version advisories: they turn a green build red because somebody else published a
@@ -85,6 +94,13 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)
+
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test)
+    testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.robolectric.annotations)
+    debugRuntimeOnly(libs.compose.ui.test.manifest)
 }
 
 // Coverage is gated where the screens keep their decisions — the view models — and reported
