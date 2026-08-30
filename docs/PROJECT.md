@@ -55,7 +55,8 @@ rules in play.
 | Module         | Contains                                                                 | Depends on     |
 |----------------|--------------------------------------------------------------------------|----------------|
 | `:core:domain` | `Cell`, `GameState`, `GameAction`, `reduce`, `PuzzleRules`/`LineRules`, `conflicts`, `BoardSnapshot`/`snapshotOf`. Pure Kotlin, **no Android**. | —              |
-| `:app`         | One package per screen with its own layers — `setup/`, `game/` — plus `puzzle/` for which puzzle this is, and a shared `theme/`. | `:core:domain` |
+| `:core:data`   | `Databases` and the Room implementation behind it: how a database is opened. No entity, no DAO, no query. | —              |
+| `:app`         | One package per screen with its own layers — `setup/`, `game/`, `history/` — plus `puzzle/` for which puzzle this is, and a shared `theme/`. | `:core:domain`, `:core:data` |
 
 `:core:domain` holds what every screen shares, including `MIN_BOARD_SIZE`: a board of two or
 three has no solution at all, and one of one is a single square, so four is where the puzzle
@@ -64,6 +65,11 @@ screen — `setup/domain` names the size the stepper starts on, and `LARGEST_PLA
 `puzzle/` beside the variant, names the largest board this app will play — both the stepper and
 the game route answer to it, and neither is something the puzzle cares about. The domain holds boards far larger — up to the point where one
 entry per square stops being a grid worth building.
+
+A feature that keeps something brings its own `@Database`, its tables and the queries it runs,
+and asks `:core:data` for the connection: `history/` owns `puzzle.db`, states what it needs as
+`SolveRepository` in its `domain` and implements it over Room in its `data`, so what a view model
+is handed is the interface and a second source later is a change behind it (TRADEOFFS D4).
 
 The module boundary is the only layering the build enforces: `:core:domain` compiles against
 the Kotlin standard library alone, so the compiler cannot see Android from it. Inside `:app` the
@@ -234,8 +240,9 @@ It belongs to the view model — a coroutine in `viewModelScope` writing into it
 | Layout              | at four window shapes: no square below 24 dp, the whole board reachable, and the details under the board or beside it; Setup's Start still reachable when the screen is short |
 | Wiring              | `MainActivity` launched for real: Start opens a board at the chosen size, takes a queen, marks an attack, resets and goes back |
 | Route guard         | a size the app cannot play sends the player back to Setup instead of reaching the board |
+| Records             | against a real database, not a mock of one: a solved board survives the round trip, a delete takes its own row and no other, clearing empties the table, and a best time belongs to its own size; and the connection itself, against a table `:core:data` declares in its own tests |
 
-93 tests: 39 in `:core:domain`, 54 in `:app`. Both screens are tested as composables, run on
+102 tests: 39 in `:core:domain`, 2 in `:core:data`, 61 in `:app`. Both screens are tested as composables, run on
 the JVM under Robolectric, so `check` needs no device. What the tests do not yet cover is
 written down in §6.
 

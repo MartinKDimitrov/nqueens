@@ -86,11 +86,18 @@ per-feature modules.
 A **`:core:data`** module is added only when persistence lands (best times, saved game).
 
 **Revised.** Persistence has landed: a solved board is recorded and the records are listed and
-deleted on their own screen. The store is **Room** — the feature is a list with per-row and
-wholesale deletion, which is a table, not a preferences file — and it is tested against an
-in-memory database rather than a mock, so the queries themselves are exercised. It arrives as a
-`history/` feature with its own `domain`, `data` and `presentation`, not as `:core:data`: nothing
-outside that feature reads it, and a module boundary would buy a coverage gate over one table.
+deleted on their own screen. The feature states what it needs as a repository in its `domain`
+and implements it over **Room** in its `data` — the feature is a list with per-row and wholesale
+deletion, which is a table, not a preferences file — and it is tested against an in-memory
+database rather than a mock, so the queries themselves are exercised. What a view model is given
+is the repository, so a second source later is a change behind it and not in front of it.
+
+`:core:data` is the third module, and it holds **only what it takes to open a database**: no
+entity, no DAO, no query. A feature declares its own `@Database` with the tables and queries it
+needs and asks `:core:data` for a connection, so its persistence travels with it and a feature
+could be lifted into a module of its own without touching the core. The price is a file per
+feature — two Room databases must not be pointed at one file — so `solves.db` belongs to the
+history feature alone, and a second feature that wants storage gets its own.
 
 **Why.** A separate `:core:domain` lets the compiler forbid Android in the domain. Adding
 `:core:data` before there is anything to persist would be a module with no content and a
@@ -273,3 +280,21 @@ directly. For a game whose state changes on a tap, that is the whole job.
 **Note on the pattern split.** Setup is MVVM and Game is MVI (D3): that difference is about how
 changes are *expressed* — named methods versus one `onAction`. How the state is *observed* is a
 separate axis, and it is the same on both screens.
+
+---
+
+## D14 — A solved board stores its variant as a string resource id
+
+**Options.** A stable key of the feature's own (`"queens"`), translated to a resource when the
+row is drawn; the `@StringRes` id itself; the whole `Variant` serialised.
+
+**Decision.** The **`@StringRes` id**, written into the row and read back through
+`stringResource`. One column, one lookup, and no second table of names to keep in step with the
+variants.
+
+**Cost.** Resource ids are assigned at build time. They hold for a given build and for any build
+that leaves the resources alone, but removing or renaming a resource shifts the ids around it, and
+a row written by an older build then names a different string — or none at all, where
+`stringResource` throws. Nothing in the build detects it. Changing the variants therefore means a
+migration that rewrites the column.
+

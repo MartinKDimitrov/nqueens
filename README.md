@@ -53,16 +53,15 @@ Formatting is fixed rather than reported by:
 Just the tests, which need no device and take about fifteen seconds:
 
 ```bash
-./gradlew :core:domain:test :app:testDebugUnitTest
+./gradlew :core:domain:test :core:data:testDebugUnitTest :app:testDebugUnitTest
 ```
 
 Fifteen seconds is a warm build. The first run downloads Robolectric's Android runtime (a few
 hundred megabytes, cached afterwards) and compiles everything including annotation processing,
 which takes a few minutes.
 
-Reports land in `core/domain/build/reports/` and `app/build/reports/` — tests, coverage and
-detekt each write their own, and Android lint writes its own under `app/`, which is the only
-module it runs on.
+Reports land under each module's `build/reports/` — tests, coverage and detekt each write their
+own, and Android lint writes its own under `app/` and `core/data/`, the two modules it runs on.
 
 To have the gate run before every commit:
 
@@ -70,23 +69,25 @@ To have the gate run before every commit:
 git config core.hooksPath .githooks
 ```
 
-**93 tests**: 39 in the domain, 54 in the app. The domain is gated at 90% line and 90% branch
+**102 tests**: 39 in the domain, 2 in the data module, 61 in the app. The domain is gated at 90% line and 90% branch
 coverage and currently sits at 100% and 98.78%; view models are gated at 85% line. The screens
 are covered by running them, not by counting their lines: code executed under Robolectric is
 invisible to JaCoCo, so their coverage reads as zero and means nothing.
 
 ## Architecture
 
-Two modules that hold code, under a `:core` container:
+Three modules that hold code, two of them under a `:core` container:
 
-| Module         | What it holds                                                                |
-|----------------|------------------------------------------------------------------------------|
-| `:core:domain` | The whole game as pure Kotlin: board, rules, state machine, conflict detection |
-| `:app`         | Compose UI, one package per screen with its own layers, plus the shared theme |
+| Module         | What it holds                                                                  |
+|----------------|--------------------------------------------------------------------------------|
+| `:core:domain` | The whole game as pure Kotlin: board, rules, state machine, conflict detection  |
+| `:core:data`   | How a database is opened, and nothing else: no table, no query                  |
+| `:app`         | Compose UI, one package per screen with its own layers, plus the shared theme   |
 
 `:core:domain` compiles against the Kotlin standard library alone. The compiler cannot see
 Android from it, which is the only layering boundary the build actually enforces — inside
-`:app`, the layers are packages held by convention.
+`:app`, the layers are packages held by convention. A feature that stores something brings its
+own tables and queries and asks `:core:data` for the connection.
 
 ### The three decisions worth knowing
 

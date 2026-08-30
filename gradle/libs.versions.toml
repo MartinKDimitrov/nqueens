@@ -18,6 +18,8 @@ androidxFragment = "1.5.1"
 javaxInject = "1"
 androidxTestJunit = "1.1.5"
 androidxAnnotation = "1.9.1"
+room = "2.6.1"
+androidxSqlite = "2.4.0"
 
 [libraries]
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "androidxActivity" }
@@ -58,6 +60,13 @@ androidx-test-junit = { group = "androidx.test.ext", name = "junit", version.ref
 compose-ui-geometry = { group = "androidx.compose.ui", name = "ui-geometry" }
 androidx-annotation = { group = "androidx.annotation", name = "annotation", version.ref = "androidxAnnotation" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-common = { group = "androidx.room", name = "room-common", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version.ref = "androidxSqlite" }
+robolectric-shadows-framework = { group = "org.robolectric", name = "shadows-framework", version.ref = "robolectric" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -69,3 +78,4 @@ dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.r
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+android-library = { id = "com.android.library", version.ref = "agp" }

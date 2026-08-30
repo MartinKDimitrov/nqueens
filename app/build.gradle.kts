@@ -71,8 +71,15 @@ kotlin {
     }
 }
 
+// Room writes Kotlin rather than Java, so the feature's table and its DAO stay `internal` like
+// the rest of the module: generated Java cannot call the mangled names Kotlin gives them.
+ksp {
+    arg("room.generateKotlin", "true")
+}
+
 dependencies {
     implementation(project(":core:domain"))
+    implementation(project(":core:data"))
 
     // Every artifact the code needs is declared, so `buildHealth` can hold the build file to
     // what is really used. Five of them — animation, coroutines, fragment, ui-geometry and the
@@ -100,6 +107,12 @@ dependencies {
     implementation(libs.navigation.runtime)
     implementation(libs.kotlinx.coroutines.core)
 
+    implementation(libs.room.runtime)
+    implementation(libs.room.common)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+    implementation(libs.androidx.sqlite)
+
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)
 
@@ -108,6 +121,7 @@ dependencies {
     testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.robolectric)
     testImplementation(libs.robolectric.annotations)
+    testImplementation(libs.robolectric.shadows.framework)
     testImplementation(libs.androidx.test.junit)
     debugRuntimeOnly(libs.compose.ui.test.manifest)
     implementation(libs.hilt.android)

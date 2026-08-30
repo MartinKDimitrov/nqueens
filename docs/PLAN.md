@@ -201,11 +201,38 @@ or written down as a known gap in the document that would otherwise overstate th
   deterministic.
 - Tests: the reducer counts and resets; the view model's ticker is driven by a test scheduler.
 
-**Step 6.4 — Win state.**
-- `BoardSnapshot.isSolved` is read at last: the board stops taking taps and the win card names the
-  size, the variant and the finishing time, with a way back to Setup and on to the records.
-- Tests: view model (a solved board is solved once and stays solved until reset); **Compose UI**
-  (the card appears, the board refuses a tap under it).
+**Step 6.4 — The store for solved boards.** *(built)*
+- `:core:data` owns how a database is opened and nothing else: no table, no query, no name of its
+  own. A feature brings its own `@Database`, the tables it needs and the queries it runs against
+  them, and asks `:core:data` for the connection — so it carries its persistence with it
+  (TRADEOFFS D4).
+- The `history/` feature keeps one row per solved board: the size, the variant, the finishing time
+  and when it was finished. Only solved boards are recorded — an abandoned game is not a result.
+  Its `domain` states what the feature needs — a record, and a `SolveRepository` that adds one,
+  deletes one, clears everything and reports the best time for a size; its `data` implements that
+  over Room, and the view models are given the interface, never the database. A second source —
+  a server, a backup — is a collaborator of the repository, not a change to the screens. Nothing
+  is on screen yet. The variant is kept as its string resource id (TRADEOFFS D14).
+- Tests: the repository against an **in-memory database**, so the queries run rather than a mock of
+  them — a record survives the round trip, a delete removes its own row and no other, clearing
+  empties the table, and the best time is the smallest for that size alone; and `:core:data`
+  against a database the test itself declares, so what opens a connection is exercised without
+  a feature to lend it one.
+
+**Step 6.5 — Win state.**
+- `BoardSnapshot.isSolved` is read at last: the board stops taking taps, the solved board is
+  recorded once — not once per recomposition — and the win card names the size, the variant, the
+  finishing time and how it stands against the best time before it. `Play again` starts the same
+  board over; the clock stops with the board.
+- Tests: view model (a solved board is solved once and stays solved until reset, is written to the
+  store exactly once, and stops the clock); **Compose UI** (the card appears, the board refuses a
+  tap under it).
+
+**Step 6.6 — The records screen.**
+- Reached from Setup; the solved boards listed, a row deleted on its own, and everything cleared
+  at once behind a confirmation. The win card's second action leads here.
+- Tests: **Compose UI** (a row is listed, deleting removes it, clearing empties the list, and the
+  empty state says so).
 
 *(The design reference shows a bottom bar with Undo and Hint. Neither ships: tapping a queen
 already removes it, so Undo corrects nothing that a second tap does not, and hints depend on
@@ -221,23 +248,6 @@ the deferred solver. The bar is left out rather than shown with dead buttons.)*
   absent (TRADEOFFS D6).
 - Tests: **unit test of the pure `GameEffect → Rive input` mapping**; **Compose UI** test
   that the fallback path renders. Visual polish is judged by eye.
-
----
-
-## Phase 9 — Solved boards, kept
-
-**Step 9.1 — Record a solved board.**
-- A `history/` feature with its own `domain`, `data` and `presentation`. Room stores one row per
-  solved board: the size, the variant, the finishing time and when it was finished. Only solved
-  boards are recorded — an abandoned game is not a result.
-- Tests: the store against an **in-memory database**, so the queries run rather than a mock of
-  them; the view model over a fake repository.
-
-**Step 9.2 — The records screen.**
-- Reached from Setup; a list newest first, a row deleted on its own, and everything cleared at
-  once behind a confirmation.
-- Tests: **Compose UI** (a row is listed, deleting removes it, clearing empties the list, and the
-  empty state says so).
 
 ---
 
