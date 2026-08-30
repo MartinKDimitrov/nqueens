@@ -69,7 +69,7 @@ To have the gate run before every commit:
 git config core.hooksPath .githooks
 ```
 
-**102 tests**: 39 in the domain, 2 in the data module, 61 in the app. The domain is gated at 90% line and 90% branch
+**109 tests**: 39 in the domain, 2 in the data module, 68 in the app. The domain is gated at 90% line and 90% branch
 coverage and currently sits at 100% and 98.78%; view models are gated at 85% line. The screens
 are covered by running them, not by counting their lines: code executed under Robolectric is
 invisible to JaCoCo, so their coverage reads as zero and means nothing.

@@ -165,6 +165,12 @@ and the piece's own drawing, because asserting which glyph was painted means com
 pixel by pixel, which breaks whenever the icon is redrawn without protecting any behaviour.
 Hard-coding either back to the queens' would pass.
 
+Two more belong to what a solved board writes down. Nothing joins the view model to the real
+table: the view model is tested against a fake repository and the repository against a real
+database, but no test crosses that seam, so a wrong binding in the Hilt graph would be found by
+running the app rather than by the suite. And the clock that stamps a record is the system's
+only in production — every test hands the view model one of its own.
+
 Three smaller ones, in the tests themselves rather than the code. The counter's label is substituted
 in the variant test with the back button's string, so the test cannot tell the label being read
 from the variant apart from that one string being hard-coded in its place. The large-type stepper test presses the button by its
@@ -240,9 +246,10 @@ It belongs to the view model — a coroutine in `viewModelScope` writing into it
 | Layout              | at four window shapes: no square below 24 dp, the whole board reachable, and the details under the board or beside it; Setup's Start still reachable when the screen is short |
 | Wiring              | `MainActivity` launched for real: Start opens a board at the chosen size, takes a queen, marks an attack, resets and goes back |
 | Route guard         | a size the app cannot play sends the player back to Setup instead of reaching the board |
+| Win                 | a solved board is covered by the card, which names it and the finishing time and says by how much it beat the best before it; the squares under the card offer no tap to a finger or to TalkBack; the clock stops with the board and the solve is written down once |
 | Records             | against a real database, not a mock of one: a solved board survives the round trip, a delete takes its own row and no other, clearing empties the table, and a best time belongs to its own size; and the connection itself, against a table `:core:data` declares in its own tests |
 
-102 tests: 39 in `:core:domain`, 2 in `:core:data`, 61 in `:app`. Both screens are tested as composables, run on
+109 tests: 39 in `:core:domain`, 2 in `:core:data`, 68 in `:app`. Both screens are tested as composables, run on
 the JVM under Robolectric, so `check` needs no device. What the tests do not yet cover is
 written down in §6.
 

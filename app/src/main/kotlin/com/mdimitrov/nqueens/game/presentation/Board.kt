@@ -38,7 +38,7 @@ private const val QUEEN_SCALE = 0.7f
 internal fun BoardCard(
     board: BoardSnapshot,
     variant: Variant,
-    onTap: (Cell) -> Unit,
+    onTap: ((Cell) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val colors = NQueensTheme.board
@@ -60,7 +60,7 @@ internal fun BoardCard(
 private fun Board(
     board: BoardSnapshot,
     variant: Variant,
-    onTap: (Cell) -> Unit,
+    onTap: ((Cell) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth().aspectRatio(1f)) {
@@ -85,7 +85,7 @@ private fun Square(
     cell: Cell,
     variant: Variant,
     status: CellStatus,
-    onTap: (Cell) -> Unit,
+    onTap: ((Cell) -> Unit)?,
     modifier: Modifier,
 ) {
     val colors = NQueensTheme.board
@@ -102,7 +102,7 @@ private fun Square(
         modifier =
             modifier
                 .background(squareBackground(status, isLightCell(cell.row, cell.col), colors))
-                .clickable { onTap(cell) }
+                .clickable(enabled = onTap != null) { onTap?.invoke(cell) }
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {

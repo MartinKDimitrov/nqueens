@@ -1,6 +1,7 @@
 package com.mdimitrov.nqueens.history.data
 
 import com.mdimitrov.nqueens.data.Databases
+import com.mdimitrov.nqueens.history.domain.Clock
 import com.mdimitrov.nqueens.history.domain.SolveRepository
 import dagger.Binds
 import dagger.Module
@@ -30,4 +31,12 @@ internal abstract class SolveRepositoryModule {
     @Binds
     @Singleton
     abstract fun repository(repository: SolveRepositoryImpl): SolveRepository
+}
+
+/** The clock the feature stamps its records with. */
+@Module
+@InstallIn(SingletonComponent::class)
+internal object ClockModule {
+    @Provides
+    fun clock(): Clock = Clock { System.currentTimeMillis() }
 }

@@ -40,5 +40,6 @@ class SquarePaintTest {
             border = Color(0xFF000007),
             surfaceAlt = Color(0xFF000008),
             onSurfaceMuted = Color(0xFF000009),
+            success = Color(0xFF1F9D6B),
         )
 }

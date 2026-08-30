@@ -219,7 +219,7 @@ or written down as a known gap in the document that would otherwise overstate th
   against a database the test itself declares, so what opens a connection is exercised without
   a feature to lend it one.
 
-**Step 6.5 — Win state.**
+**Step 6.5 — Win state.** *(built)*
 - `BoardSnapshot.isSolved` is read at last: the board stops taking taps, the solved board is
   recorded once — not once per recomposition — and the win card names the size, the variant, the
   finishing time and how it stands against the best time before it. `Play again` starts the same

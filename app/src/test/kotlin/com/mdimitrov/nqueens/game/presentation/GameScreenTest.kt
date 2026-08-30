@@ -4,9 +4,11 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -30,6 +32,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 private const val BOARD_SIZE = 4
+private const val WINNING_TIME = 84
 private val MIN_SQUARE = 24.dp
 
 @RunWith(RobolectricTestRunner::class)
@@ -224,6 +227,48 @@ class GameScreenTest {
         }
 
         compose.onNodeWithText("Start").assertExists()
+    }
+
+    @Test
+    fun `a solved board is covered by the win card and takes no more taps`() {
+        var again = false
+        val solved = uiState(arrayOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2)), BOARD_SIZE).board
+        compose.setContent {
+            NQueensTheme {
+                GameContent(
+                    state = GameUiState(solved, Queens, WINNING_TIME),
+                    onTap = { },
+                    onReset = { again = true },
+                    onBack = {},
+                )
+            }
+        }
+
+        compose.onNodeWithText("Solved!").assertIsDisplayed()
+        compose.onNodeWithText("FINISHING TIME").assertIsDisplayed()
+        compose.onAllNodesWithText("01:24").assertCountEquals(2)
+        compose.onNodeWithText("New best", substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("Row 1, column 1, empty").assertIsNotEnabled()
+
+        compose.onNodeWithText("Play again").performClick()
+        assertTrue(again)
+    }
+
+    @Test
+    fun `a board finished faster than before says by how much`() {
+        val solved = uiState(arrayOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2)), BOARD_SIZE).board
+        compose.setContent {
+            NQueensTheme {
+                GameContent(
+                    state = GameUiState(solved, Queens, WINNING_TIME, bestBefore = WINNING_TIME + 12),
+                    onTap = {},
+                    onReset = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        compose.onNodeWithText("New best — 12s faster than before").assertIsDisplayed()
     }
 
     private fun assertHittable(size: Int) {

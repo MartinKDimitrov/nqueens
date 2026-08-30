@@ -7,9 +7,15 @@ import com.mdimitrov.nqueens.domain.GameAction
 import com.mdimitrov.nqueens.domain.Line
 import com.mdimitrov.nqueens.domain.LineKind
 import com.mdimitrov.nqueens.domain.LineRules
+import com.mdimitrov.nqueens.history.domain.Clock
+import com.mdimitrov.nqueens.history.domain.Solve
+import com.mdimitrov.nqueens.history.domain.SolveRepository
 import com.mdimitrov.nqueens.puzzle.Queens
+import com.mdimitrov.nqueens.puzzle.Variant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -18,6 +24,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
@@ -107,7 +114,7 @@ class GameViewModelTest {
     @Test
     fun `the game plays by the rules it was given, not by the ones it could assume`() {
         val rowsOnly = LineRules { cell -> setOf(Line(LineKind.ROW, cell.row)) }
-        val viewModel = GameViewModel(Queens.copy(rules = rowsOnly), SavedStateHandle(mapOf(SIZE_ARGUMENT to 4)))
+        val viewModel = gameOf(variant = Queens.copy(rules = rowsOnly))
 
         viewModel.onAction(GameAction.Toggle(Cell(0, 0)))
         viewModel.onAction(GameAction.Toggle(Cell(1, 0)))
@@ -128,9 +135,112 @@ class GameViewModelTest {
         assertEquals(0, viewModel.uiState.elapsedSeconds)
     }
 
-    private fun gameOf(size: Int = 4) =
-        GameViewModel(
-            variant = Queens,
-            savedStateHandle = SavedStateHandle(mapOf(SIZE_ARGUMENT to size)),
-        )
+    @Test
+    fun `the clock stops on a solved board and runs again after reset`() {
+        val viewModel = gameOf()
+        listOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2))
+            .forEach { viewModel.onAction(GameAction.Toggle(it)) }
+        assertTrue(viewModel.uiState.board.isSolved)
+
+        clock.scheduler.advanceTimeBy(3.5.seconds)
+        assertEquals(0, viewModel.uiState.elapsedSeconds)
+
+        viewModel.onAction(GameAction.Reset)
+        assertFalse(viewModel.uiState.board.isSolved)
+
+        clock.scheduler.advanceTimeBy(2.5.seconds)
+        assertEquals(2, viewModel.uiState.elapsedSeconds)
+    }
+
+    @Test
+    fun `a solved board is written down once, with the time it took`() {
+        val solves = FakeSolves()
+        val viewModel = gameOf(solves = solves, finishedAt = 1_700L)
+
+        clock.scheduler.advanceTimeBy(2.5.seconds)
+        solveThe(viewModel)
+        clock.scheduler.runCurrent()
+
+        val record = solves.added.single()
+        assertEquals(4, record.size)
+        assertEquals(Queens.name, record.variant)
+        assertEquals(2, record.seconds)
+        assertEquals(1_700L, record.finishedAt)
+    }
+
+    @Test
+    fun `a solved board disturbed and solved again is still one record`() {
+        val solves = FakeSolves()
+        val viewModel = gameOf(solves = solves)
+        solveThe(viewModel)
+        clock.scheduler.runCurrent()
+
+        viewModel.onAction(GameAction.Toggle(Cell(0, 1)))
+        viewModel.onAction(GameAction.Toggle(Cell(0, 1)))
+        clock.scheduler.runCurrent()
+
+        assertEquals(1, solves.added.size)
+    }
+
+    @Test
+    fun `a board played again after a reset is a record of its own`() {
+        val solves = FakeSolves()
+        val viewModel = gameOf(solves = solves)
+        solveThe(viewModel)
+        clock.scheduler.runCurrent()
+
+        viewModel.onAction(GameAction.Reset)
+        solveThe(viewModel)
+        clock.scheduler.runCurrent()
+
+        assertEquals(2, solves.added.size)
+    }
+
+    @Test
+    fun `the card is told the best time from before this board was solved`() {
+        val solves = FakeSolves().apply { fastest = 90 }
+        val viewModel = gameOf(solves = solves)
+
+        solveThe(viewModel)
+        clock.scheduler.runCurrent()
+        assertEquals(90, viewModel.uiState.bestBefore)
+
+        viewModel.onAction(GameAction.Reset)
+        assertNull(viewModel.uiState.bestBefore)
+    }
+
+    private fun gameOf(
+        size: Int = 4,
+        variant: Variant = Queens,
+        solves: SolveRepository = FakeSolves(),
+        finishedAt: Long = 0L,
+    ) = GameViewModel(
+        variant = variant,
+        solves = solves,
+        clock = Clock { finishedAt },
+        savedStateHandle = SavedStateHandle(mapOf(SIZE_ARGUMENT to size)),
+    )
+
+    private fun solveThe(viewModel: GameViewModel) =
+        listOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2))
+            .forEach { viewModel.onAction(GameAction.Toggle(it)) }
+}
+
+private class FakeSolves : SolveRepository {
+    val added = mutableListOf<Solve>()
+    var fastest: Int? = null
+
+    override fun solves(): Flow<List<Solve>> = flowOf(added.toList())
+
+    override suspend fun add(solve: Solve) {
+        added += solve
+    }
+
+    override suspend fun delete(id: Long) {
+        added.removeAll { it.id == id }
+    }
+
+    override suspend fun clear() = added.clear()
+
+    override suspend fun best(size: Int): Int? = fastest
 }

@@ -20,6 +20,10 @@
     <string name="game_back">Back to setup</string>
     <string name="game_counter_value">%1$d</string>
     <string name="game_time">TIME</string>
+    <string name="game_solved">Solved!</string>
+    <string name="game_finishing_time">FINISHING TIME</string>
+    <string name="game_play_again">Play again</string>
+    <string name="game_new_best">New best — %1$ds faster than before</string>
     <!-- Queens variant -->
     <string name="variant_queens">Queens</string>
     <string name="variant_queens_counter">QUEENS LEFT</string>

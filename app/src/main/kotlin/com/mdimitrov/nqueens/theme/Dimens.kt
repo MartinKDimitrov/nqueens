@@ -19,4 +19,10 @@ internal val HairlineBorder = 1.dp
 internal object Radii {
     val sm = 6.dp
     val md = 12.dp
+    val lg = 20.dp
+}
+
+/** The elevations from design/tokens.json. */
+internal object Elevation {
+    val high = 12.dp
 }

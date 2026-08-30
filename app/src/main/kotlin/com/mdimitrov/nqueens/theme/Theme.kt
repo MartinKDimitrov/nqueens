@@ -21,6 +21,7 @@ internal data class BoardColors(
     val border: Color,
     val surfaceAlt: Color,
     val onSurfaceMuted: Color,
+    val success: Color,
 )
 
 internal val LocalBoardColors =
@@ -64,6 +65,7 @@ private val LightBoard =
         surfaceAlt = LightSurfaceAlt,
         onSurfaceMuted = LightOnSurfaceMuted,
         hint = LightHint,
+        success = LightSuccess,
     )
 
 private val DarkBoard =
@@ -77,6 +79,7 @@ private val DarkBoard =
         surfaceAlt = DarkSurfaceAlt,
         onSurfaceMuted = DarkOnSurfaceMuted,
         hint = DarkHint,
+        success = DarkSuccess,
     )
 
 @Composable

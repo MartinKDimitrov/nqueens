@@ -87,25 +87,35 @@ internal fun GameContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .safeDrawingPadding(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        TopBar(state = state, onReset = onReset, onBack = onBack)
+    // A solved board keeps its shape but stops answering: no handler, so a square offers no tap
+    // to anyone — a finger or TalkBack alike.
+    val taps = if (state.board.isSolved) null else onTap
 
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val floor = MinSquare * state.board.size + BoardInset * 2
-            val beside = maxOf(floor, maxHeight - Spacing.lg * 2)
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .safeDrawingPadding(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            TopBar(state = state, onReset = onReset, onBack = onBack)
 
-            if (maxWidth > maxHeight && maxWidth - beside - WideGutters >= MinSidePane) {
-                WideBody(state = state, onTap = onTap, boardSide = beside)
-            } else {
-                TallBody(state = state, onTap = onTap, boardSide = maxOf(floor, maxWidth - Spacing.lg * 2))
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val floor = MinSquare * state.board.size + BoardInset * 2
+                val beside = maxOf(floor, maxHeight - Spacing.lg * 2)
+
+                if (maxWidth > maxHeight && maxWidth - beside - WideGutters >= MinSidePane) {
+                    WideBody(state = state, onTap = taps, boardSide = beside)
+                } else {
+                    TallBody(state = state, onTap = taps, boardSide = maxOf(floor, maxWidth - Spacing.lg * 2))
+                }
             }
+        }
+
+        if (state.board.isSolved) {
+            WinCard(state = state, onPlayAgain = onReset, onBack = onBack)
         }
     }
 }
@@ -113,7 +123,7 @@ internal fun GameContent(
 @Composable
 private fun TallBody(
     state: GameUiState,
-    onTap: (Cell) -> Unit,
+    onTap: ((Cell) -> Unit)?,
     boardSide: Dp,
 ) {
     Column(
@@ -147,7 +157,7 @@ private fun TallBody(
 @Composable
 private fun WideBody(
     state: GameUiState,
-    onTap: (Cell) -> Unit,
+    onTap: ((Cell) -> Unit)?,
     boardSide: Dp,
 ) {
     Row(
