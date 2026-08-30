@@ -46,15 +46,15 @@ class ConflictsTest {
 
     @Test
     fun `the counter falls as queens are placed`() {
-        assertEquals(4, queensLeft(emptySet(), size = 4))
-        assertEquals(2, queensLeft(setOf(Cell(0, 1), Cell(1, 3)), size = 4))
-        assertEquals(0, queensLeft(setOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2)), size = 4))
+        assertEquals(4, piecesLeft(emptySet(), target = 4))
+        assertEquals(2, piecesLeft(setOf(Cell(0, 1), Cell(1, 3)), target = 4))
+        assertEquals(0, piecesLeft(setOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2)), target = 4))
     }
 
     @Test
     fun `the counter stops at zero when more queens are placed than the board asks for`() {
         val crowded = setOf(Cell(0, 0), Cell(1, 1), Cell(2, 2), Cell(3, 3), Cell(0, 1))
-        assertEquals(0, queensLeft(crowded, size = 4))
+        assertEquals(0, piecesLeft(crowded, target = 4))
     }
 }
 

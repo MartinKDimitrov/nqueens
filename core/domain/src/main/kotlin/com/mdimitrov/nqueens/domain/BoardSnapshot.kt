@@ -1,12 +1,13 @@
 package com.mdimitrov.nqueens.domain
 
-public enum class CellStatus { EMPTY, QUEEN, QUEEN_CONFLICT }
+public enum class CellStatus { EMPTY, PIECE, PIECE_CONFLICT }
 
-/** Everything the board needs in order to draw itself, worked out once per change of state. */
+/** The grid the board draws, and the two counts it shows, worked out once per change of state. */
 public data class BoardSnapshot(
     public val size: Int,
     public val statuses: List<CellStatus>,
-    public val queensLeft: Int,
+    public val piecesLeft: Int,
+    public val piecesUnderAttack: Int,
     public val isSolved: Boolean,
 ) {
     public fun statusAt(
@@ -25,7 +26,7 @@ public fun snapshotOf(
     state: GameState,
     rules: LineRules,
 ): BoardSnapshot {
-    val conflicting = conflicts(state.queens, rules)
+    val conflicting = conflicts(state.pieces, rules)
     val statuses =
         buildList(state.size * state.size) {
             for (row in 0 until state.size) {
@@ -33,8 +34,8 @@ public fun snapshotOf(
                     val cell = Cell(row, col)
                     add(
                         when (cell) {
-                            in conflicting -> CellStatus.QUEEN_CONFLICT
-                            in state.queens -> CellStatus.QUEEN
+                            in conflicting -> CellStatus.PIECE_CONFLICT
+                            in state.pieces -> CellStatus.PIECE
                             else -> CellStatus.EMPTY
                         },
                     )
@@ -45,7 +46,8 @@ public fun snapshotOf(
     return BoardSnapshot(
         size = state.size,
         statuses = statuses,
-        queensLeft = queensLeft(state.queens, state.size),
-        isSolved = state.queens.size == state.size && conflicting.isEmpty(),
+        piecesLeft = piecesLeft(state.pieces, target = state.size),
+        piecesUnderAttack = conflicting.size,
+        isSolved = state.pieces.size == state.size && conflicting.isEmpty(),
     )
 }

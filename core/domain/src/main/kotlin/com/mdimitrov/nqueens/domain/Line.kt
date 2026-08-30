@@ -14,7 +14,7 @@ public fun interface LineRules {
     public fun linesThrough(cell: Cell): Set<Line>
 }
 
-/** The four lines through a queen's square. */
+/** The four lines through a piece's square. */
 public val NQueensLines: LineRules =
     LineRules { cell ->
         setOf(

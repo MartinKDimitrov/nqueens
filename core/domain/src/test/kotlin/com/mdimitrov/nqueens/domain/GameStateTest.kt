@@ -15,20 +15,20 @@ class GameStateTest {
     @Test
     fun `a queen off the board is refused`() {
         assertFailsWith<IllegalArgumentException> {
-            GameState(size = 4, queens = setOf(Cell(0, 4)))
+            GameState(size = 4, pieces = setOf(Cell(0, 4)))
         }
     }
 
     @Test
     fun `a new board starts empty`() {
-        assertTrue(GameState(size = 8).queens.isEmpty())
+        assertTrue(GameState(size = 8).pieces.isEmpty())
     }
 
     @Test
     fun `an offending queen is named, so a failure says which one`() {
         val thrown =
             assertFailsWith<IllegalArgumentException> {
-                GameState(size = 4, queens = setOf(Cell(0, 0), Cell(9, 9)))
+                GameState(size = 4, pieces = setOf(Cell(0, 0), Cell(9, 9)))
             }
         assertTrue(thrown.message.orEmpty().contains("Cell(row=9, col=9)"), thrown.message)
     }

@@ -2,6 +2,7 @@ package com.mdimitrov.nqueens.domain
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /** The diagonal identifiers are the arithmetic that makes conflict counting cheap. */
@@ -24,5 +25,13 @@ class CellTest {
         assertEquals(2, queens.size)
         assertTrue(Cell(1, 1) in queens)
         assertEquals(Cell(3, 3), Cell(1, 1).copy(row = 3, col = 3))
+    }
+
+    @Test
+    fun `the board alternates, starting light in the corner the player reads first`() {
+        assertTrue(isLightCell(row = 0, col = 0))
+        assertFalse(isLightCell(row = 0, col = 1))
+        assertFalse(isLightCell(row = 1, col = 0))
+        assertTrue(isLightCell(row = 1, col = 1))
     }
 }

@@ -7,7 +7,7 @@ public fun reduce(
     when (action) {
         is GameAction.Toggle ->
             if (action.cell.isOnBoard(state.size)) {
-                state.copy(queens = state.queens.toggle(action.cell))
+                state.copy(pieces = state.pieces.toggle(action.cell))
             } else {
                 state
             }
@@ -19,7 +19,7 @@ public fun reduce(
                 state
             }
 
-        GameAction.Reset -> state.copy(queens = emptySet())
+        GameAction.Reset -> state.copy(pieces = emptySet())
     }
 
 private fun Set<Cell>.toggle(cell: Cell): Set<Cell> = if (cell in this) this - cell else this + cell
