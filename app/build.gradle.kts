@@ -7,6 +7,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     jacoco
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
 }
 
 android {
@@ -51,10 +53,14 @@ android {
     // the version advisories: they turn a green build red because somebody else published a
     // release, and upgrading is a decision to take deliberately, not one to be forced into by
     // a commit.
+    //
+    // The tests are analyzed too, so a resource-type mistake in a test fails the build like one
+    // in the app. It costs about five seconds.
     lint {
         warningsAsErrors = true
         abortOnError = true
         disable += setOf("GradleDependency", "AndroidGradlePluginVersion", "OldTargetApi")
+        checkTestSources = true
     }
 }
 
@@ -68,8 +74,10 @@ kotlin {
 dependencies {
     implementation(project(":core:domain"))
 
-    // Every artifact the source actually imports is declared, so `buildHealth` can hold the
-    // build file to what the code really uses. The BOM keeps their versions in step.
+    // Every artifact the code needs is declared, so `buildHealth` can hold the build file to
+    // what is really used. Five of them — animation, coroutines, fragment, ui-geometry and the
+    // AndroidX test runner — no source file imports: they are needed by what Compose, Hilt and
+    // the test harness generate. The BOM keeps the versions in step.
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.animation)
     implementation(libs.compose.foundation)
@@ -100,12 +108,23 @@ dependencies {
     testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.robolectric)
     testImplementation(libs.robolectric.annotations)
+    testImplementation(libs.androidx.test.junit)
     debugRuntimeOnly(libs.compose.ui.test.manifest)
+    implementation(libs.hilt.android)
+    implementation(libs.hilt.navigation.compose)
+    ksp(libs.hilt.compiler)
+    implementation(libs.androidx.fragment)
+    implementation(libs.androidx.lifecycle.viewmodel.savedstate)
+    implementation(libs.dagger)
+    implementation(libs.hilt.core)
+    implementation(libs.javax.inject)
+    testImplementation(libs.compose.ui.geometry)
+    implementation(libs.androidx.annotation)
 }
 
-// Coverage is gated where the screens keep their decisions — the view models — and reported
-// but not gated elsewhere, because composables are checked by running them, not by counting
-// their lines.
+// Coverage is gated where the screens keep their decisions — the view models. The screens
+// themselves are not measured at all: code Robolectric executes is invisible to JaCoCo, so a
+// number for them would read as zero however many tests ran. They are checked by running them.
 private val viewModelClasses =
     fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
         include("**/*ViewModel*.class")

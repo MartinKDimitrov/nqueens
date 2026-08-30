@@ -7,6 +7,9 @@
 #     chmod +x .githooks/pre-commit
 #     git config core.hooksPath .githooks
 #
+# In this repository the copy is already made and one rule was taken out of it, so copying the
+# template over this file would put that rule back. Point git at the hook; do not re-copy it.
+#
 # The reason this is a hook and not a habit: in practice every round of fixes
 # introduces a defect, and the ones that do real damage are caught by checks
 # that had been run -- just not before the commit that buried them. The hook

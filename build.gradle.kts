@@ -8,6 +8,9 @@ plugins {
     alias(libs.plugins.spotless) apply false
     // Declared here, applied to the modules below: on the root alone it analyses nothing.
     alias(libs.plugins.dependency.analysis)
+
+    alias(libs.plugins.ksp) apply false
+    alias(libs.plugins.hilt) apply false
 }
 
 // Spotless (ktlint) formats every module and the Gradle scripts themselves.
