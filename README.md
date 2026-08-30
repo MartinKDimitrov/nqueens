@@ -5,11 +5,11 @@ no shared row, column, or diagonal.
 
 ## State of the work
 
-The **Setup screen** works: the board is drawn at the chosen size, a stepper moves it between 4
-and 12, and Start carries the size onward. The **game logic is complete and tested** in
-`:core:domain` — placing and removing queens, live conflict detection, the queens-left count and
-the solved verdict. **The board itself is not built yet**, so the game route is a placeholder
-that prints the chosen size.
+**The game plays.** Choose a board between 4 and 12 on the Setup screen, then place and remove
+queens by tapping. Queens that threaten each other are marked as you go, a counter tracks how
+many are still to place, and reset clears the board.
+
+Not built yet: the elapsed timer, the win state and the animations that go with them.
 
 What is deliberately absent, and why, is in [`docs/PROJECT.md`](docs/PROJECT.md).
 
@@ -50,14 +50,19 @@ Formatting is fixed rather than reported by:
 ./gradlew spotlessApply
 ```
 
-Just the tests, which need no device and take about two seconds:
+Just the tests, which need no device and take about fifteen seconds:
 
 ```bash
 ./gradlew :core:domain:test :app:testDebugUnitTest
 ```
 
-Reports land in `core/domain/build/reports/` and `app/build/reports/` — tests, coverage, detekt
-and lint each write their own.
+Fifteen seconds is a warm build. The first run downloads Robolectric's Android runtime (a few
+hundred megabytes, cached afterwards) and compiles everything including annotation processing,
+which takes a few minutes.
+
+Reports land in `core/domain/build/reports/` and `app/build/reports/` — tests, coverage and
+detekt each write their own, and Android lint writes its own under `app/`, which is the only
+module it runs on.
 
 To have the gate run before every commit:
 
@@ -65,8 +70,10 @@ To have the gate run before every commit:
 git config core.hooksPath .githooks
 ```
 
-**39 tests**: 35 in the domain, 4 in the app. The domain is gated at 90% line and 90% branch
-coverage and currently sits at 100% and 99%; view models are gated at 85% line.
+**90 tests**: 37 in the domain, 53 in the app. The domain is gated at 90% line and 90% branch
+coverage and currently sits at 100% and 98.78%; view models are gated at 85% line. The screens
+are covered by running them, not by counting their lines: code executed under Robolectric is
+invisible to JaCoCo, so their coverage reads as zero and means nothing.
 
 ## Architecture
 
@@ -111,8 +118,16 @@ The two answer the same question by different routes, and the property test make
 restatement of the code.
 
 The reducer is table-driven — a list of `state × action → expected state` cases, each carrying
-its own description so a failure names itself. The Setup screen has no automated test: `check`
-does not run a composable, so the screens are checked by hand on an emulator.
+its own description so a failure names itself.
+
+Both screens are tested as composables, run on the JVM under Robolectric so they stay inside
+`make check` and need no device. The board's squares carry no text, only colour, so the tests
+find them by the same content descriptions that make the board usable with a screen reader —
+one piece of work serving both.
+
+Seven of those tests start at `MainActivity` and press Start, so the container, the navigation
+host and the route argument are exercised as the app assembles them rather than as a test
+assembles them. Without that, the whole wiring could be removed and the suite would stay green.
 
 ## Layout
 
@@ -120,12 +135,17 @@ does not run a composable, so the screens are checked by hand on an emulator.
 core/domain/          the game, in pure Kotlin
 app/
   MainActivity.kt
+  NQueensApplication.kt
   NQueensNavHost.kt
-  PlayableBoards.kt   the largest board this app will play
+  puzzle/             which puzzle this is — its name, its piece, its rules —
+                      and the largest board the app will play
   theme/              colours, type and dimensions from design/tokens.json
   setup/
-    domain/           the board sizes this screen offers
-    presentation/     view model, screen, board thumbnail
+    domain/           the size the stepper starts on
+    presentation/     ui state, view model, screen, board thumbnail
+  game/
+    presentation/     ui state, view model, screen, top bar, board, how a
+                      square is painted, and the route that carries the size
 design/               design reference: tokens, screen SVGs, the queen icon
 docs/                 what this is, why it is shaped this way, and the plan
 ```

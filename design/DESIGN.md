@@ -14,18 +14,25 @@ drawn from those values; never introduce a color that is not in `tokens.json`.
 ## Design principles
 
 - Chess-inspired, not skeuomorphic: two low-chroma neutral squares, no wood.
-- Board sizes 4×4 – 12×12 share one layout: a square whose cells are `side / N`. On Setup the
-  square is a fixed 262 dp, matching the card in `setup.svg`.
-- State is never signalled by color alone: conflict adds an outlined tile and a
-  glow, hint adds a dashed ring, blocked adds a center dot, fixed adds a border.
+- Board sizes 4×4 – 12×12 share one layout: a square whose cells divide what is left of its side
+  after the frame's inset. On Setup the square is capped at 262 dp, matching the card in
+  `setup.svg`, and takes the width when the screen is narrower.
+- State is never signalled by color alone: in the mockups conflict adds an outlined tile and a
+  glow, hint adds a dashed ring, blocked adds a center dot, fixed adds a border. None of those
+  marks is in the app: it tints the conflicting square and the queen standing on it, and what
+  carries the state non-visually is the square's content description, which reads "queen under
+  attack".
 - Contrast is not uniform, and the pairings below are text against its own background at AA's
-  4.5:1. Dark falls short at `blocked` on `surface` (2.79:1), `conflict` on `boardLight` (4.21:1)
-  and `fixed` on `boardLight` (4.38:1) — the last two clear the 3:1 threshold that applies to
-  marks rather than letters. Light falls short at `conflict` on `conflictGlow` (3.07:1), `hint`
-  on `surface` (2.09:1), `success` on `surface` (3.45:1) and `blocked` on `surface` (2.59:1) and
-  on `boardDark` (1.44:1). The conflict pairing is the one that matters,
-  since it is the state the game relies on — which is why a conflicting queen is also given an
-  outline and a glow rather than a colour alone.
+  4.5:1. The pairing the app actually draws is `conflict` on `conflictGlow` — 3.07:1 in light and
+  5.05:1 in dark — because a square under attack always takes the glow behind the glyph; a
+  conflict colour is never drawn on a plain board square in either theme. The rest of the list is
+  about states the mockups define and the app does not: dark falls short at `blocked` on
+  `surface` (2.79:1) and `fixed` on `boardLight` (4.38:1), light at `hint` on `surface` (2.09:1),
+  `success` on `surface` (3.45:1) and `blocked` on `surface` (2.59:1) and on `boardDark`
+  (1.44:1). The conflict pairing is the one that matters, since it is the state the game relies
+  on. The shipped square marks it with a tinted background
+  and a tinted glyph; the outline the mockup draws is not there, so the non-visual carrier is
+  the content description alone.
 
 ## Screens
 
@@ -36,9 +43,10 @@ Title block, a preview of the board at the chosen size, a board-size stepper
 above the safe area, with the current best time for the selected size below it.
 
 *Implemented differently:* the app has one puzzle, so the variant control is a row that shows it
-rather than a dropdown, and there is no best time because nothing is stored. The screen is a
-plain column that does not scroll, so Start follows the controls rather than being anchored to
-the bottom.
+rather than a dropdown, and there is no best time because nothing is stored. The preview draws
+an empty board at the chosen size; the mockup draws a solved eight-queen one. Start follows the
+controls rather than being anchored to the bottom, and the column scrolls, so on a screen too
+short for the whole of it — a phone held sideways — the button is still reachable.
 
 ### Game (`game.svg`)
 Top bar on `surface`: queens-left counter, elapsed timer, reset action — three
@@ -46,10 +54,27 @@ equal pills of `radii.md`. The board is centered with a `surface` frame and
 `radii.md` corners. A status strip above the bottom bar carries the hint text.
 Bottom bar: two equal-width secondary buttons, **Undo** and **Hint**.
 
+*Implemented differently:* on a screen wider than it is tall the board sits at the left with the
+summary, the strip and the hint beside it; the mockup only draws the tall arrangement. The top
+bar carries a back button at the left and two pills, not
+three — there is no timer yet. The pills share a height rather than having a fixed one, so they
+grow together when the player raises the system font size, and the status strip's mark is sized
+in `sp` so it tracks the type rather than outgrowing it. `game.svg` does not draw the back
+button, because the mockup
+was updated in the design tool and the SVG was not regenerated. The board summary sits under the
+bar rather than in it. The status strip carries an idle prompt or the number of queens under
+attack; there is no hint feature, so it never carries hint text. The summary reads the puzzle's
+name from the variant, so it is "12 × 12 · Queens" rather than the mockup's uppercase. There is
+no bottom bar. The
+board never draws a square smaller than 24 dp. It takes the width when the screen is tall and
+the height when it is wide, and when neither leaves that much room it keeps the floor and the
+screen scrolls instead. The details move beside the board only when what is left is wide enough
+to read the status message in; otherwise they stay under it.
+
 ### Game — conflicts (`game-conflicts.svg`)
-Identical layout; attacking queens switch to `QUEEN_CONFLICT` (conflict-tinted
+Identical layout; attacking queens switch to `PIECE_CONFLICT` (conflict-tinted
 tile, 2 px `conflict` border, glowing queen glyph) and the status strip becomes
-a `conflict` banner naming the attack line. Non-attacking queens stay `QUEEN`.
+a `conflict` banner naming the attack line. Non-attacking queens stay `PIECE`.
 
 ### Win overlay (`win.svg`)
 The solved board stays visible under a 55 % `onSurface` scrim. Layers are kept
@@ -71,8 +96,8 @@ Every cell state at real board scale with its name and backing token.
 | State | Appearance | Light tokens | Dark tokens |
 | --- | --- | --- | --- |
 | `EMPTY` | Alternating square, no piece | `boardLight` `#E6EAEF` / `boardDark` `#B9C2CE` | `boardLight` `#2C3A45` / `boardDark` `#1A252E` |
-| `QUEEN` | Queen glyph on the plain square | `queen` `#12212B` | `queen` `#EAF1F5` |
-| `QUEEN_CONFLICT` | Tinted tile + 2 px border + glowing glyph | `conflict` `#D93A3A` on `conflictGlow` `#F7C9C9` | `conflict` `#FF6B6B` on `conflictGlow` `#4A1E22` |
+| `PIECE` | Piece glyph on the plain square | `queen` `#12212B` | `queen` `#EAF1F5` |
+| `PIECE_CONFLICT` *(border and glow not implemented)* | Tinted tile + 2 px border + glowing glyph | `conflict` `#D93A3A` on `conflictGlow` `#F7C9C9` | `conflict` `#FF6B6B` on `conflictGlow` `#4A1E22` |
 | `BLOCKED` *(not implemented)* | Dimmed tile with a center dot, not tappable | `blocked` `#97A2AE` | `blocked` `#55636F` |
 | `FIXED` *(not implemented)* | Given queen, muted glyph + solid border, locked | `fixed` `#4A5A69` on `surfaceAlt` `#E9EDF2` | `fixed` `#8FA1AE` on `surfaceAlt` `#1B262F` |
 | `HINT` *(not implemented)* | Dashed ring + 22 % tinted fill + ghost queen | `hint` `#54C3CB` | `hint` `#2FBFC8` |
@@ -84,9 +109,10 @@ time, so the two are kept in step by review rather than by a check.
 
 - Material's own roles — primary, surface, background, error — go into the Compose colour
   scheme. The colours Material has no name for travel beside it in `BoardColors`, through a
-  `CompositionLocal`: `boardLight`, `boardDark`, `queen`, `conflict`, `conflictGlow`, `border`,
-  `surfaceAlt`, `onSurfaceMuted`. The tokens for states that do not exist yet — `blocked`,
-  `fixed`, `hint`, `success`, `queenOn` — are not in the code.
+  `CompositionLocal`: `boardLight`, `boardDark`, `queen`, `conflict`, `conflictGlow`, `hint`,
+  `border`, `surfaceAlt`, `onSurfaceMuted`. `hint` marks the status strip while the board is
+  quiet. The tokens for states that do not exist — `blocked`, `fixed`, `success`, `queenOn` —
+  are not in the code.
 - `typography.scale` maps onto the Material text styles by size, weight and line height.
   `letterSpacing` is not carried across; the one place the app sets it, the Setup title, uses a
   wider value than the token because the design draws the title spaced out.
@@ -94,4 +120,4 @@ time, so the two are kept in step by review rather than by a check.
   every step the tokens define. `elevation` is unused: nothing in the app casts a shadow.
 - `queen.svg` is converted to `res/drawable/ic_queen.xml`, tinted by the caller. The same paths,
   white on the brand teal, make `res/drawable/ic_launcher.xml`.
-- Cell state in code is one of three values — `EMPTY`, `QUEEN`, `QUEEN_CONFLICT`.
+- Cell state in code is one of three values — `EMPTY`, `PIECE`, `PIECE_CONFLICT`.

@@ -68,8 +68,9 @@ queens, or fall back to set-based backtracking.
 **Decision.** **MVI on Game, MVVM on Setup.** Best times are out of scope, so there is no
 Scores screen; were one built it would be MVVM, being a list read from a repository.
 
-**Why.** Game is a state machine with many discrete actions and one-shot effects, and is
-the screen extended live — MVI's "one action, one reducer branch" uniformity pays off.
+**Why.** Game is a state machine — every move is one action through one reducer — and it is the
+screen extended live, so "one action, one reducer branch" is the uniformity that pays off. The
+win state will add the first one-shot effect; the shape is already there for it.
 Setup is simple input; MVI would be overhead. Match the pattern to the complexity.
 
 **Revisit if.** Setup grows real interactive complexity (e.g. a puzzle editor).
@@ -102,8 +103,8 @@ path, and `CellStatus` has three values — because nothing in the brief forbids
 An action that cannot be carried out — a tap outside the board, a board too small to have a
 solution — **leaves the state unchanged**. `reduce` is total: no input can make it throw. The
 game route holds the same line: a size it cannot play sends the player back to Setup instead of
-raising, so neither a deep link nor a back stack restored after the process died can crash the
-app.
+raising, so a back stack restored after the process died cannot crash the app, and neither could
+a deep link if one were ever declared — the app declares none today.
 
 **Why.** Placing freely and seeing the conflicts is how the puzzle is played. Building the
 reject path before a variant needs it would be a branch nothing takes and no test could justify.
@@ -118,7 +119,7 @@ not one — better stated plainly than claimed as an isolation that does not exi
 
 **Context.** The brief asks for placement and victory animation.
 
-**Decision, for when the game screen exists.** **Rive drives the victory celebration** (one
+**Decision.** **Rive drives the victory celebration** (one
 `.riv`, trigger `celebrate`). **Placement bounce and conflict shake are Compose** (per-cell,
 cheap, no asset). **Compose-native celebration is the fallback** if the `.riv` is not ready.
 Nothing of this is built: there is no Rive dependency and no `.riv` in the repository.
@@ -140,13 +141,15 @@ confetti file can serve as a placeholder.
 
 ## D7 — Dependency injection: Hilt
 
-**Decision.** **Hilt, when there is a dependency to inject — not yet.** `SetupViewModel` has no
-collaborators, so a container would hold nothing. The first real binding is `LineRules` for the
-game screen.
+**Decision.** **Hilt, for the one dependency there is.** `PuzzleModule` provides the `Variant` —
+the puzzle's name, its piece and its rules — and both view models receive it: the game plays by
+it, and Setup names it in the variant row.
 
-**Why wait.** Wiring a framework before anything needs it produces annotations a reviewer has to
-read past to find the code. Meanwhile the seam is kept honest a cheaper way: `conflicts` and
-`snapshotOf` take rules with **no default**, so no call site can silently assume N-Queens.
+**Why so little.** The container was wired in the step that needed it, not before: annotations a
+reviewer has to read past to find the code are a cost, and one binding is what the app has to
+show for them. The seam does not rest on the container either — `conflicts` and `snapshotOf`
+take rules with **no default**, so no call site can silently assume N-Queens even where nothing
+is injected.
 
 **Revisit if.** Annotation-processing cost becomes a problem — Koin is the fallback.
 
@@ -165,9 +168,16 @@ version is a pure constant-factor change to reach for only if measured.
 **Decision.** Validate conflict detection against the pairwise `attacks` **oracle** over seeded
 random boards. Gate the domain at **90% line and 90% branch**, naming both counters, and gate
 `*ViewModel*` classes at **85% line**. When a solver is built, check it against the known
-solution counts (OEIS A000170). Compose UI tests arrive with the board they would assert;
-screen rendering beyond that is checked by hand on an emulator, since `check` does not launch
-the app.
+solution counts (OEIS A000170). Screens are rendered inside `check` under Robolectric: most
+tests hand a board straight to the content composable, and a few launch `MainActivity` so the
+container, the navigation host and the route argument are exercised as the app assembles them.
+A rendered test reads the semantics tree, not the pixels, so the square's paint decisions are a
+pure function tested on its own — and then one test class does read the pixels: Robolectric
+rasterises under `@GraphicsMode(NATIVE)`, the window is drawn into a bitmap, and the colour under
+a named square is compared against the token it should carry. That is not screenshot testing:
+there are no golden images to review or to keep, only integer comparisons against
+`theme/Color.kt`, so a deliberate colour change touches one line rather than a folder of
+approvals.
 
 **Why.** The oracle is simple enough to trust and catches divergence in the fast code. Naming
 the counters matters more than it looks: JaCoCo measures *instructions* by default, which a

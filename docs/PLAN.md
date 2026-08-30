@@ -39,7 +39,7 @@ on a real defect:
 | tests                | JUnit4 + `kotlin.test`; property tests use a **seeded** `Random`|
 | coverage floor       | `jacocoTestCoverageVerification` for the domain, `viewModelCoverageInputs` + `viewModelCoverageVerification` for `:app` |
 | dependency hygiene   | `dependency-analysis` `buildHealth`, applied to **every module**, failing on any advice |
-| Android resources    | `lint` with `warningsAsErrors`; version advisories excluded            |
+| Android resources    | `lint` with `warningsAsErrors`, over the test sources as well; version advisories excluded |
 
 **Vulnerability audit (not built).** OWASP dependency-check needs an NVD API key and a large
 local database, which makes it too slow and flaky for a per-commit gate. It is not wired at all
@@ -59,6 +59,27 @@ Point git at it once:
 ```bash
 git config core.hooksPath .githooks
 ```
+
+## The review pass
+
+`check` is what a commit must pass. It is not what makes the code right — it cannot read a
+comment that has gone stale, notice a test that would pass on broken code, or find a claim in
+a document that the code stopped honouring. That is a separate pass, run before handing the
+work over rather than on every commit, by seven independent readers that see only the
+repository on disk and never this conversation:
+
+| Reader                     | What it attacks                                                                       |
+|----------------------------|---------------------------------------------------------------------------------------|
+| `adversarial-code`         | logic: off-by-one and overflow, state that goes stale, two paths that must agree with nothing holding them together |
+| `adversarial-architecture` | whether the code has the shape the documents claim — the import graph, layering, dead code |
+| `adversarial-style`        | what a linter cannot: comments that have gone wrong, misleading names, error messages nobody can act on |
+| `test-quality`             | mutates the code in a copy and reports which mutants the suite lets through            |
+| `regression-hunt`          | what the last round of changes broke, including the interactions between the fixes     |
+| `verify-findings-closed`   | breaks each reported defect again to see whether the fix actually bites                |
+| `docs-claims-audit`        | every factual claim in the documentation against what the code does                    |
+
+Each finding is then either fixed and proved — by breaking the fix and watching the suite fail —
+or written down as a known gap in the document that would otherwise overstate the work.
 
 ---
 
@@ -87,7 +108,7 @@ git config core.hooksPath .githooks
 - Tests: each of the four lines of attack, a non-attacking pair, symmetry, the identity pair.
 
 **Step 1.2 — Conflict detection by counting line occupancy.** *(built)*
-- `LineKind`/`Line`/`LineRules` with `NQueensLines`; `conflicts()` and `queensLeft()`. Conflicts
+- `LineKind`/`Line`/`LineRules` with `NQueensLines`; `conflicts()` and `piecesLeft()`. Conflicts
   are found by counting occupancy per line, so the geometry stays in the rules rather than in the
   validator (TRADEOFFS D1).
 - Tests: worked examples plus a **property test vs the pairwise oracle** over 500 seeded
@@ -98,7 +119,7 @@ git config core.hooksPath .githooks
 ## Phase 2 — Domain: state machine
 
 **Step 2.1 — `GameState`, `GameAction`, `reduce`.** *(built)*
-- `GameState(size, queens)` with its invariants; sealed `GameAction` (`Toggle`, `Reset`,
+- `GameState(size, pieces)` with its invariants; sealed `GameAction` (`Toggle`, `Reset`,
   `NewGame`); pure `reduce(state, action)`.
 - No `history`/`Undo`, no `fixed`/`blocked`, no reject path: nothing in scope produces them, and
   each is one member plus one reducer branch when it is wanted.
@@ -107,8 +128,8 @@ git config core.hooksPath .githooks
 - Tests: table-driven `state × action → expected state`; invariants; purity.
 
 **Step 2.2 — Board snapshot and cell status.** *(built)*
-- `CellStatus` (`EMPTY`, `QUEEN`, `QUEEN_CONFLICT`); `BoardSnapshot` (row-major grid,
-  queens left, solved) produced by `snapshotOf(state, rules)` — computed once per state change so
+- `CellStatus` (`EMPTY`, `PIECE`, `PIECE_CONFLICT`); `BoardSnapshot` (row-major grid,
+  pieces left, solved) produced by `snapshotOf(state, rules)` — computed once per state change so
   the UI decides nothing.
 - Tests: empty, lone, conflicting and solved boards; row/column not transposed.
 
@@ -128,7 +149,7 @@ git config core.hooksPath .githooks
 ## Phase 4 — App scaffold
 
 **Step 4.1 — Navigation, theme, design tokens.** *(built)*
-- `:app`: Compose Navigation host with `setup` and `game` destinations (the game one stubbed);
+- `:app`: Compose Navigation host with `setup` and `game` destinations;
   Material theme carrying `NQueensTypography`, with the
   board's own colours beside it in `BoardColors` through a `CompositionLocal` (light + dark).
   Both are transcribed from `design/tokens.json` by hand; nothing reads it at build time.
@@ -143,29 +164,38 @@ git config core.hooksPath .githooks
   variant row with the one puzzle that exists, and a "Start" that carries the size to the game
   route.
 - Tests: the view model clamps at both ends and starts at the default; coverage-gated at 85%.
-  The screen itself has no automated test — `check` does not run a composable.
+  The screen is rendered under Robolectric inside `check`: the stepper's ends, and that Start
+  carries the chosen size.
 
 ---
 
 ## Phase 6 — Game screen (MVI)
 
-**Step 6.1 — Board rendering + tap → toggle.**
-- Hilt arrives here: `GameViewModel` is the first class with a dependency to inject
-  (`LineRules` → `NQueensLines`).
-- Dynamic `n×n` Compose board; `GameViewModel` exposing `GameUiState` as `mutableStateOf`
-  (TRADEOFFS D13) and one `onAction`; tap dispatches `Toggle`; queens rendered.
-- Tests: ViewModel (tap places/removes; maps to `GameUiState`); **Compose UI** (queen
-  renders on tapped cell).
+**Step 6.1 — Board rendering + tap → toggle.** *(built)*
+- Hilt arrives here: `GameViewModel` is the first class with a dependency to inject, and
+  `PuzzleModule` provides the `Variant` that carries the rules.
+- Dynamic `n×n` Compose board; `GameViewModel` holds `GameState` in a `mutableStateOf`
+  (TRADEOFFS D13) and derives the `BoardSnapshot` from it; one `onAction` dispatches `Toggle`;
+  queens rendered.
+- Tests: view model (tap places and removes; the board follows the state); **Compose UI** (a
+  square carrying a queen says so, and a tap reports the square it was made on).
 
-**Step 6.2 — Conflict highlight + queens-left counter.**
-- `QUEEN_CONFLICT` styling; live counter; Compose conflict shake.
-- Tests: ViewModel (conflicting placement flagged; counter decrements); **Compose UI**
-  (conflict styling shown).
+**Step 6.2 — Conflict highlight + queens-left counter.** *(built)*
+- `PIECE_CONFLICT` styling; the queens-left pill; a status strip that names the trouble in
+  words; a top bar carrying the back button and the reset action, with the board summary under it.
+- Tests: view model (conflicting placement flagged; the counter follows; reset clears the
+  board; the rules it was given are the ones it plays by); **Compose UI** (conflicting squares
+  say so, the counter follows the board, the strip names the trouble, both controls report their
+  taps, and the board survives a screen wider than it is tall); **painting** (the square's colours
+  and the piece's presence as a pure function, and the same decisions read back as pixels off a
+  rasterised board); **navigation** (`MainActivity` launched
+  for real: Start opens a board at the chosen size, it takes a queen, an attack is marked, reset
+  gives the board back and back returns to Setup; and the host itself refuses a size the app
+  cannot play).
 
-**Step 6.3 — Elapsed timer + reset.**
-- Elapsed-time display (not persisted); `Reset` action clears to `fixed` and restarts the
-  timer.
-- Tests: timer selector; reset clears board and timer.
+**Step 6.3 — Elapsed timer.**
+- Elapsed-time display (not persisted), reset together with the board. Reset itself is built.
+- Tests: the timer starts, advances and returns to zero on reset.
 
 **Step 6.4 — Win state + celebration effect.**
 - Win detection → `GameEffect.Solved` (Channel, one-shot); win overlay.
@@ -190,9 +220,9 @@ the deferred solver. The bar is left out rather than shown with dead buttons.)*
 
 ## Phase 8 — Polish and handover
 
-**Step 8.1 — Accessibility pass.** *(partly built: the README is written and the Setup screen
-carries content descriptions; the board's are not, and there is no sound.)*
-- Content descriptions for cells; optional SFX for placement/win; `README.md`
-  (build/test/run + architecture decisions, pointing to `docs/`).
+**Step 8.1 — Accessibility pass.** *(partly built: the README is written, every control carries
+a description, and on the game board every square says its row, column and what stands on it.
+Setup's preview is described as one board rather than square by square. There is no sound.)*
+- Optional SFX for placement and win; a pass over contrast and touch targets.
 
 ---
