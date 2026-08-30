@@ -63,14 +63,19 @@ private val WideGutters = Spacing.lg * 3
 @Composable
 internal fun GameScreen(
     onBack: () -> Unit,
+    onScores: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: GameViewModel = hiltViewModel(),
 ) {
     GameContent(
         state = viewModel.uiState,
-        onTap = { cell -> viewModel.onAction(GameAction.Toggle(cell)) },
-        onReset = { viewModel.onAction(GameAction.Reset) },
-        onBack = onBack,
+        actions =
+            GameActions(
+                onTap = { cell -> viewModel.onAction(GameAction.Toggle(cell)) },
+                onReset = { viewModel.onAction(GameAction.Reset) },
+                onBack = onBack,
+                onScores = onScores,
+            ),
         modifier = modifier,
     )
 }
@@ -82,14 +87,12 @@ internal fun GameScreen(
 @Composable
 internal fun GameContent(
     state: GameUiState,
-    onTap: (Cell) -> Unit,
-    onReset: () -> Unit,
-    onBack: () -> Unit,
+    actions: GameActions,
     modifier: Modifier = Modifier,
 ) {
     // A solved board keeps its shape but stops answering: no handler, so a square offers no tap
     // to anyone — a finger or TalkBack alike.
-    val taps = if (state.board.isSolved) null else onTap
+    val taps = if (state.board.isSolved) null else actions.onTap
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
@@ -100,7 +103,7 @@ internal fun GameContent(
                     .safeDrawingPadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            TopBar(state = state, onReset = onReset, onBack = onBack)
+            TopBar(state = state, onReset = actions.onReset, onBack = actions.onBack)
 
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val floor = MinSquare * state.board.size + BoardInset * 2
@@ -115,7 +118,7 @@ internal fun GameContent(
         }
 
         if (state.board.isSolved) {
-            WinCard(state = state, onPlayAgain = onReset, onBack = onBack)
+            WinCard(state = state, onPlayAgain = actions.onReset, onScores = actions.onScores)
         }
     }
 }

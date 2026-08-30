@@ -17,6 +17,7 @@ internal fun gameRoute(size: Int): String = "$GAME_ROUTE/$size"
 internal fun NavGraphBuilder.gameDestination(
     playableSizes: IntRange,
     onBack: () -> Unit,
+    onScores: () -> Unit,
     onUnplayableSize: () -> Unit,
 ) {
     composable(
@@ -25,7 +26,7 @@ internal fun NavGraphBuilder.gameDestination(
     ) { entry ->
         val size = entry.arguments?.getInt(SIZE_ARGUMENT) ?: (playableSizes.first - 1)
         if (size in playableSizes) {
-            GameScreen(onBack = onBack)
+            GameScreen(onBack = onBack, onScores = onScores)
         } else {
             LaunchedEffect(size) { onUnplayableSize() }
         }

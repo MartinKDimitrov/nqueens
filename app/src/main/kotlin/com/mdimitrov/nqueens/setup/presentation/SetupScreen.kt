@@ -1,5 +1,6 @@
 package com.mdimitrov.nqueens.setup.presentation
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -51,19 +53,25 @@ private val VariantRowHeight = 56.dp
 private val StartButtonHeight = 60.dp
 private val PieceIconSide = 22.dp
 private val TitleLetterSpacing = 1.5.sp
+private val ScoresButtonHeight = 48.dp
 private const val DISABLED_ALPHA = 0.4f
 
 @Composable
 internal fun SetupScreen(
     onStart: (Int) -> Unit,
+    onScores: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SetupViewModel = hiltViewModel(),
 ) {
     SetupContent(
         state = viewModel.uiState,
-        onShrink = viewModel::shrink,
-        onGrow = viewModel::grow,
-        onStart = onStart,
+        actions =
+            SetupActions(
+                onShrink = viewModel::shrink,
+                onGrow = viewModel::grow,
+                onStart = onStart,
+                onScores = onScores,
+            ),
         modifier = modifier,
     )
 }
@@ -71,9 +79,7 @@ internal fun SetupScreen(
 @Composable
 internal fun SetupContent(
     state: SetupUiState,
-    onShrink: () -> Unit,
-    onGrow: () -> Unit,
-    onStart: (Int) -> Unit,
+    actions: SetupActions,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -107,7 +113,7 @@ internal fun SetupContent(
         Spacer(Modifier.height(Spacing.xl))
         SectionLabel(stringResource(R.string.setup_board_size_label))
         Spacer(Modifier.height(Spacing.sm))
-        BoardSizeStepper(state = state, onShrink = onShrink, onGrow = onGrow)
+        BoardSizeStepper(state = state, onShrink = actions.onShrink, onGrow = actions.onGrow)
 
         Spacer(Modifier.height(Spacing.lg))
         SectionLabel(stringResource(R.string.setup_variant_label))
@@ -115,16 +121,41 @@ internal fun SetupContent(
         VariantRow(variant = state.variant)
 
         Spacer(Modifier.height(Spacing.xl))
-        Button(
-            onClick = { onStart(state.size) },
-            modifier = Modifier.fillMaxWidth().height(StartButtonHeight),
-            shape = RoundedCornerShape(Radii.md),
-        ) {
-            Text(
-                text = stringResource(R.string.setup_start),
-                style = MaterialTheme.typography.labelLarge,
-            )
-        }
+        Choices(size = state.size, actions = actions)
+    }
+}
+
+@Composable
+private fun Choices(
+    size: Int,
+    actions: SetupActions,
+) {
+    Button(
+        onClick = { actions.onStart(size) },
+        modifier = Modifier.fillMaxWidth().height(StartButtonHeight),
+        shape = RoundedCornerShape(Radii.md),
+    ) {
+        Text(
+            text = stringResource(R.string.setup_start),
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+
+    OutlinedButton(
+        onClick = actions.onScores,
+        modifier =
+            Modifier
+                .padding(top = Spacing.md)
+                .fillMaxWidth()
+                .heightIn(min = ScoresButtonHeight),
+        shape = RoundedCornerShape(Radii.md),
+        border = BorderStroke(HairlineBorder, NQueensTheme.board.border),
+    ) {
+        Text(
+            text = stringResource(R.string.setup_scores),
+            style = MaterialTheme.typography.labelLarge,
+            color = NQueensTheme.board.onSurfaceMuted,
+        )
     }
 }
 
@@ -269,9 +300,7 @@ private fun SetupSmallestPreview() {
     NQueensTheme {
         SetupContent(
             state = SetupUiState(MIN_BOARD_SIZE, Queens),
-            onShrink = {},
-            onGrow = {},
-            onStart = {},
+            actions = SetupActions(onShrink = {}, onGrow = {}, onStart = {}, onScores = {}),
         )
     }
 }
@@ -282,9 +311,7 @@ private fun SetupLargestDarkPreview() {
     NQueensTheme(darkTheme = true) {
         SetupContent(
             state = SetupUiState(LARGEST_PLAYABLE_BOARD, Queens),
-            onShrink = {},
-            onGrow = {},
-            onStart = {},
+            actions = SetupActions(onShrink = {}, onGrow = {}, onStart = {}, onScores = {}),
         )
     }
 }

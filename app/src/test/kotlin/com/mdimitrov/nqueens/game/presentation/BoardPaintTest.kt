@@ -74,9 +74,7 @@ class BoardPaintTest {
                             variant = Queens,
                             elapsedSeconds = 0,
                         ),
-                    onTap = {},
-                    onReset = {},
-                    onBack = {},
+                    actions = GameActions(onTap = {}, onReset = {}, onBack = {}, onScores = {}),
                 )
             }
         }

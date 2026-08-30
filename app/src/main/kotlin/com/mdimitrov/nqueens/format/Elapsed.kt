@@ -1,4 +1,4 @@
-package com.mdimitrov.nqueens.game.presentation
+package com.mdimitrov.nqueens.format
 
 import java.util.Locale
 

@@ -28,6 +28,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mdimitrov.nqueens.R
+import com.mdimitrov.nqueens.format.formatElapsed
 import com.mdimitrov.nqueens.theme.Elevation
 import com.mdimitrov.nqueens.theme.NQueensTheme
 import com.mdimitrov.nqueens.theme.Radii
@@ -44,7 +45,7 @@ private val CARD_WIDTH = 360.dp
 internal fun WinCard(
     state: GameUiState,
     onPlayAgain: () -> Unit,
-    onBack: () -> Unit,
+    onScores: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -57,7 +58,7 @@ internal fun WinCard(
                 .padding(Spacing.lg),
         contentAlignment = Alignment.Center,
     ) {
-        WinBody(state = state, onPlayAgain = onPlayAgain, onBack = onBack)
+        WinBody(state = state, onPlayAgain = onPlayAgain, onScores = onScores)
     }
 }
 
@@ -65,7 +66,7 @@ internal fun WinCard(
 private fun WinBody(
     state: GameUiState,
     onPlayAgain: () -> Unit,
-    onBack: () -> Unit,
+    onScores: () -> Unit,
 ) {
     val variantName = stringResource(state.variant.name)
     val summary = stringResource(R.string.game_board_summary, state.board.size, variantName)
@@ -109,9 +110,9 @@ private fun WinBody(
                 style = MaterialTheme.typography.labelLarge,
             )
         }
-        TextButton(onClick = onBack, modifier = Modifier.padding(top = Spacing.xs)) {
+        TextButton(onClick = onScores, modifier = Modifier.padding(top = Spacing.xs)) {
             Text(
-                text = stringResource(R.string.game_back),
+                text = stringResource(R.string.game_view_scores),
                 style = MaterialTheme.typography.labelLarge,
                 color = NQueensTheme.board.onSurfaceMuted,
             )

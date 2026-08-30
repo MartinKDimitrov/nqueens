@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.mdimitrov.nqueens.R
+import com.mdimitrov.nqueens.format.formatElapsed
 import com.mdimitrov.nqueens.theme.HairlineBorder
 import com.mdimitrov.nqueens.theme.NQueensTheme
 import com.mdimitrov.nqueens.theme.Radii

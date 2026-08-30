@@ -12,6 +12,7 @@
     <string name="setup_size_range">min %1$d — max %2$d</string>
     <string name="setup_variant_label">VARIANT</string>
     <string name="setup_board_thumbnail">Board preview, %1$d by %1$d</string>
+    <string name="setup_scores">Best times</string>
     <!-- Game screen -->
     <string name="game_cell_empty">Row %1$d, column %2$d, empty</string>
     <string name="game_reset">RESET</string>
@@ -24,6 +25,23 @@
     <string name="game_finishing_time">FINISHING TIME</string>
     <string name="game_play_again">Play again</string>
     <string name="game_new_best">New best — %1$ds faster than before</string>
+    <string name="game_view_scores">View scores</string>
+    <!-- Scores screen -->
+    <string name="scores_title">Best times</string>
+    <string name="scores_subtitle">Your fastest solves by board size</string>
+    <string name="scores_rank">%1$d</string>
+    <string name="scores_new_game">New game</string>
+    <string name="scores_clear_all">Clear all</string>
+    <string name="scores_clear_title">Clear all scores?</string>
+    <string name="scores_clear_body">Every board you have solved is forgotten. This cannot be undone.</string>
+    <string name="scores_clear_confirm">Clear</string>
+    <string name="scores_cancel">Cancel</string>
+    <string name="scores_empty">Nothing solved yet.</string>
+    <string name="scores_delete">Delete the %1$s solve on %2$d × %2$d</string>
+    <plurals name="scores_solves">
+        <item quantity="one">%1$d solve</item>
+        <item quantity="other">%1$d solves</item>
+    </plurals>
     <!-- Queens variant -->
     <string name="variant_queens">Queens</string>
     <string name="variant_queens_counter">QUEENS LEFT</string>

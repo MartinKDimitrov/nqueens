@@ -199,9 +199,13 @@ class GameScreenTest {
                             other,
                             0,
                         ),
-                    onTap = {},
-                    onReset = {},
-                    onBack = {},
+                    actions =
+                        GameActions(
+                            onTap = { },
+                            onReset = { },
+                            onBack = { },
+                            onScores = {},
+                        ),
                 )
             }
         }
@@ -219,9 +223,13 @@ class GameScreenTest {
             NQueensTheme {
                 GameContent(
                     state = GameUiState(uiState(arrayOf(Cell(0, 0)), BOARD_SIZE).board, other, 0),
-                    onTap = {},
-                    onReset = {},
-                    onBack = {},
+                    actions =
+                        GameActions(
+                            onTap = { },
+                            onReset = { },
+                            onBack = { },
+                            onScores = {},
+                        ),
                 )
             }
         }
@@ -237,9 +245,13 @@ class GameScreenTest {
             NQueensTheme {
                 GameContent(
                     state = GameUiState(solved, Queens, WINNING_TIME),
-                    onTap = { },
-                    onReset = { again = true },
-                    onBack = {},
+                    actions =
+                        GameActions(
+                            onTap = { },
+                            onReset = { again = true },
+                            onBack = { },
+                            onScores = {},
+                        ),
                 )
             }
         }
@@ -261,14 +273,36 @@ class GameScreenTest {
             NQueensTheme {
                 GameContent(
                     state = GameUiState(solved, Queens, WINNING_TIME, bestBefore = WINNING_TIME + 12),
-                    onTap = {},
-                    onReset = {},
-                    onBack = {},
+                    actions =
+                        GameActions(
+                            onTap = { },
+                            onReset = { },
+                            onBack = { },
+                            onScores = {},
+                        ),
                 )
             }
         }
 
         compose.onNodeWithText("New best — 12s faster than before").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the win card leads on to the scores`() {
+        var asked = false
+        val solved = uiState(arrayOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2)), BOARD_SIZE).board
+        compose.setContent {
+            NQueensTheme {
+                GameContent(
+                    state = GameUiState(solved, Queens, WINNING_TIME),
+                    actions = GameActions(onTap = {}, onReset = {}, onBack = {}, onScores = { asked = true }),
+                )
+            }
+        }
+
+        compose.onNodeWithText("View scores").performClick()
+
+        assertTrue(asked)
     }
 
     private fun assertHittable(size: Int) {
@@ -298,9 +332,13 @@ class GameScreenTest {
             NQueensTheme {
                 GameContent(
                     state = uiState(queens, size),
-                    onTap = onTap,
-                    onReset = onReset,
-                    onBack = onBack,
+                    actions =
+                        GameActions(
+                            onTap = onTap,
+                            onReset = onReset,
+                            onBack = onBack,
+                            onScores = {},
+                        ),
                 )
             }
         }

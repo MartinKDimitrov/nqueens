@@ -56,7 +56,7 @@ rules in play.
 |----------------|--------------------------------------------------------------------------|----------------|
 | `:core:domain` | `Cell`, `GameState`, `GameAction`, `reduce`, `PuzzleRules`/`LineRules`, `conflicts`, `BoardSnapshot`/`snapshotOf`. Pure Kotlin, **no Android**. | —              |
 | `:core:data`   | `Databases` and the Room implementation behind it: how a database is opened. No entity, no DAO, no query. | —              |
-| `:app`         | One package per screen with its own layers — `setup/`, `game/`, `history/` — plus `puzzle/` for which puzzle this is, and a shared `theme/`. | `:core:domain`, `:core:data` |
+| `:app`         | One package per screen with its own layers — `setup/`, `game/`, `history/` — plus `puzzle/` for which puzzle this is, `format/` for what both screens print, and a shared `theme/`. | `:core:domain`, `:core:data` |
 
 `:core:domain` holds what every screen shares, including `MIN_BOARD_SIZE`: a board of two or
 three has no solution at all, and one of one is a single square, so four is where the puzzle
@@ -165,6 +165,12 @@ and the piece's own drawing, because asserting which glyph was painted means com
 pixel by pixel, which breaks whenever the icon is redrawn without protecting any behaviour.
 Hard-coding either back to the queens' would pass.
 
+Two belong to the records screen. No test presses `Best times` on a running app, so the route
+from Setup to the list — and the one from the win card — is wired but never walked; the seven
+tests that launch `MainActivity` stop at the board. And the day a record carries is asserted in
+one time zone and one locale, which the test pins itself: what the date reads as anywhere else
+is the platform's business and nothing here proves it.
+
 Two more belong to what a solved board writes down. Nothing joins the view model to the real
 table: the view model is tested against a fake repository and the repository against a real
 database, but no test crosses that seam, so a wrong binding in the Hilt graph would be found by
@@ -247,9 +253,10 @@ It belongs to the view model — a coroutine in `viewModelScope` writing into it
 | Wiring              | `MainActivity` launched for real: Start opens a board at the chosen size, takes a queen, marks an attack, resets and goes back |
 | Route guard         | a size the app cannot play sends the player back to Setup instead of reaching the board |
 | Win                 | a solved board is covered by the card, which names it and the finishing time and says by how much it beat the best before it; the squares under the card offer no tap to a finger or to TalkBack; the clock stops with the board and the solve is written down once |
+| The records screen  | the boards are grouped by size and ordered by time on the screen itself, a row reports which record to forget, clearing everything is asked about first and cancelling clears nothing, and an empty list says so |
 | Records             | against a real database, not a mock of one: a solved board survives the round trip, a delete takes its own row and no other, clearing empties the table, and a best time belongs to its own size; and the connection itself, against a table `:core:data` declares in its own tests |
 
-109 tests: 39 in `:core:domain`, 2 in `:core:data`, 68 in `:app`. Both screens are tested as composables, run on
+118 tests: 39 in `:core:domain`, 2 in `:core:data`, 77 in `:app`. Both screens are tested as composables, run on
 the JVM under Robolectric, so `check` needs no device. What the tests do not yet cover is
 written down in §6.
 

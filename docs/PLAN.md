@@ -228,11 +228,19 @@ or written down as a known gap in the document that would otherwise overstate th
   store exactly once, and stops the clock); **Compose UI** (the card appears, the board refuses a
   tap under it).
 
-**Step 6.6 — The records screen.**
-- Reached from Setup; the solved boards listed, a row deleted on its own, and everything cleared
-  at once behind a confirmation. The win card's second action leads here.
-- Tests: **Compose UI** (a row is listed, deleting removes it, clearing empties the list, and the
-  empty state says so).
+**Step 6.6 — The records screen.** *(built)*
+- Reached from Setup and from the win card's second action: the solved boards in a card per board
+  size, fastest first inside it and the smallest board first, each row carrying its rank, its time
+  and the day it was finished. A row is deleted on its own; everything is cleared at once behind a
+  confirmation, since two taps is the right price for losing every record. With nothing solved the
+  screen says so and offers nothing to clear.
+- The screen follows the design's live mockup rather than `scores.svg`: grouped, not a flat list.
+  What the mockup has no room for — clearing everything, and the way in from Setup — follows
+  `DESIGN.md` instead, or the screen would be unreachable and the records permanent.
+- Tests: the view model (grouped by size smallest first, fastest first inside, deleting takes its
+  own row, clearing empties the list); **Compose UI** (the order on the screen is the order in the
+  state, a row reports which record to forget, clearing asks first and cancelling clears nothing,
+  and the empty screen says so).
 
 *(The design reference shows a bottom bar with Undo and Hint. Neither ships: tapping a queen
 already removes it, so Undo corrects nothing that a second tap does not, and hints depend on

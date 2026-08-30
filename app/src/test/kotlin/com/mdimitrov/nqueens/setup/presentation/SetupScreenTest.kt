@@ -95,9 +95,13 @@ class SetupScreenTest {
             NQueensTheme {
                 SetupContent(
                     state = SetupUiState(DEFAULT_BOARD_SIZE, other),
-                    onShrink = {},
-                    onGrow = {},
-                    onStart = {},
+                    actions =
+                        SetupActions(
+                            onShrink = {},
+                            onGrow = {},
+                            onStart = {},
+                            onScores = {},
+                        ),
                 )
             }
         }
@@ -145,9 +149,13 @@ class SetupScreenTest {
             NQueensTheme {
                 SetupContent(
                     state = SetupUiState(size, Queens),
-                    onShrink = onShrink,
-                    onGrow = onGrow,
-                    onStart = onStart,
+                    actions =
+                        SetupActions(
+                            onShrink = onShrink,
+                            onGrow = onGrow,
+                            onStart = onStart,
+                            onScores = {},
+                        ),
                 )
             }
         }

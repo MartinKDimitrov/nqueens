@@ -7,15 +7,13 @@ import com.mdimitrov.nqueens.domain.GameAction
 import com.mdimitrov.nqueens.domain.Line
 import com.mdimitrov.nqueens.domain.LineKind
 import com.mdimitrov.nqueens.domain.LineRules
+import com.mdimitrov.nqueens.history.FakeSolves
 import com.mdimitrov.nqueens.history.domain.Clock
-import com.mdimitrov.nqueens.history.domain.Solve
 import com.mdimitrov.nqueens.history.domain.SolveRepository
 import com.mdimitrov.nqueens.puzzle.Queens
 import com.mdimitrov.nqueens.puzzle.Variant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -224,23 +222,4 @@ class GameViewModelTest {
     private fun solveThe(viewModel: GameViewModel) =
         listOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2))
             .forEach { viewModel.onAction(GameAction.Toggle(it)) }
-}
-
-private class FakeSolves : SolveRepository {
-    val added = mutableListOf<Solve>()
-    var fastest: Int? = null
-
-    override fun solves(): Flow<List<Solve>> = flowOf(added.toList())
-
-    override suspend fun add(solve: Solve) {
-        added += solve
-    }
-
-    override suspend fun delete(id: Long) {
-        added.removeAll { it.id == id }
-    }
-
-    override suspend fun clear() = added.clear()
-
-    override suspend fun best(size: Int): Int? = fastest
 }
