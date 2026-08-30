@@ -42,4 +42,9 @@ class GameStateTest {
     fun `a board too large to be drawn is refused`() {
         assertFailsWith<IllegalArgumentException> { GameState(size = MAX_BOARD_SIZE + 1) }
     }
+
+    @Test
+    fun `a board cannot have run for a negative time`() {
+        assertFailsWith<IllegalArgumentException> { GameState(size = 4, elapsedSeconds = -1) }
+    }
 }

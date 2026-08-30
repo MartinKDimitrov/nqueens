@@ -85,6 +85,13 @@ per-feature modules.
 **Decision.** **Two modules for v1**: `:core:domain` (pure) and `:app` (feature packages).
 A **`:core:data`** module is added only when persistence lands (best times, saved game).
 
+**Revised.** Persistence has landed: a solved board is recorded and the records are listed and
+deleted on their own screen. The store is **Room** — the feature is a list with per-row and
+wholesale deletion, which is a table, not a preferences file — and it is tested against an
+in-memory database rather than a mock, so the queries themselves are exercised. It arrives as a
+`history/` feature with its own `domain`, `data` and `presentation`, not as `:core:data`: nothing
+outside that feature reads it, and a module boundary would buy a coverage gate over one table.
+
 **Why.** A separate `:core:domain` lets the compiler forbid Android in the domain. Adding
 `:core:data` before there is anything to persist would be a module with no content and a
 coverage gate over nothing. Full per-feature modules would be gold-plating for two screens.

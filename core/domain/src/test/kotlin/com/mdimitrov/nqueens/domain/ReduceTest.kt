@@ -124,4 +124,13 @@ class ReduceTest {
         assertEquals(GameState(size = MIN_BOARD_SIZE), reduce(board, GameAction.NewGame(size = MIN_BOARD_SIZE)))
         assertEquals(GameState(size = MAX_BOARD_SIZE), reduce(board, GameAction.NewGame(size = MAX_BOARD_SIZE)))
     }
+
+    @Test
+    fun `time advances one tick at a time and starts over with the board`() {
+        val board = GameState(size = 4, pieces = setOf(Cell(0, 0)), elapsedSeconds = 41)
+
+        assertEquals(42, reduce(board, GameAction.Tick).elapsedSeconds)
+        assertEquals(0, reduce(board, GameAction.Reset).elapsedSeconds)
+        assertEquals(41, reduce(board, GameAction.Toggle(Cell(1, 1))).elapsedSeconds)
+    }
 }

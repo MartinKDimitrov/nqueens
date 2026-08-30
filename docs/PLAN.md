@@ -193,13 +193,19 @@ or written down as a known gap in the document that would otherwise overstate th
   gives the board back and back returns to Setup; and the host itself refuses a size the app
   cannot play).
 
-**Step 6.3 — Elapsed timer.**
-- Elapsed-time display (not persisted), reset together with the board. Reset itself is built.
-- Tests: the timer starts, advances and returns to zero on reset.
+**Step 6.3 — Elapsed timer.** *(built)*
+- Elapsed time in the top bar's third pill, reset together with the board. The count is part of
+  `GameState` and grows through a `Tick` action, so every change — a tap, a reset, a second — goes
+  through `reduce` and there is one state. What stays outside is the clock itself: a coroutine in
+  the view model decides when a tick happens, which is the part that is neither pure nor
+  deterministic.
+- Tests: the reducer counts and resets; the view model's ticker is driven by a test scheduler.
 
-**Step 6.4 — Win state + celebration effect.**
-- Win detection → `GameEffect.Solved` (Channel, one-shot); win overlay.
-- Tests: ViewModel (solved board emits Solved exactly once); **Compose UI** (win overlay).
+**Step 6.4 — Win state.**
+- `BoardSnapshot.isSolved` is read at last: the board stops taking taps and the win card names the
+  size, the variant and the finishing time, with a way back to Setup and on to the records.
+- Tests: view model (a solved board is solved once and stays solved until reset); **Compose UI**
+  (the card appears, the board refuses a tap under it).
 
 *(The design reference shows a bottom bar with Undo and Hint. Neither ships: tapping a queen
 already removes it, so Undo corrects nothing that a second tap does not, and hints depend on
@@ -215,6 +221,23 @@ the deferred solver. The bar is left out rather than shown with dead buttons.)*
   absent (TRADEOFFS D6).
 - Tests: **unit test of the pure `GameEffect → Rive input` mapping**; **Compose UI** test
   that the fallback path renders. Visual polish is judged by eye.
+
+---
+
+## Phase 9 — Solved boards, kept
+
+**Step 9.1 — Record a solved board.**
+- A `history/` feature with its own `domain`, `data` and `presentation`. Room stores one row per
+  solved board: the size, the variant, the finishing time and when it was finished. Only solved
+  boards are recorded — an abandoned game is not a result.
+- Tests: the store against an **in-memory database**, so the queries run rather than a mock of
+  them; the view model over a fake repository.
+
+**Step 9.2 — The records screen.**
+- Reached from Setup; a list newest first, a row deleted on its own, and everything cleared at
+  once behind a confirmation.
+- Tests: **Compose UI** (a row is listed, deleting removes it, clearing empties the list, and the
+  empty state says so).
 
 ---
 

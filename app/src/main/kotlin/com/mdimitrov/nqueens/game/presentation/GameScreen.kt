@@ -95,7 +95,7 @@ internal fun GameContent(
                 .safeDrawingPadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        TopBar(piecesLeft = state.board.piecesLeft, variant = state.variant, onReset = onReset, onBack = onBack)
+        TopBar(state = state, onReset = onReset, onBack = onBack)
 
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val floor = MinSquare * state.board.size + BoardInset * 2

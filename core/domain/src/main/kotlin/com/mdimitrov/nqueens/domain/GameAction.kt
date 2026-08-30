@@ -10,4 +10,7 @@ public sealed interface GameAction {
 
     /** Abandon this board and start a new one. */
     public data class NewGame(public val size: Int) : GameAction
+
+    /** One unit of elapsed time. The caller decides the cadence; the state only counts. */
+    public data object Tick : GameAction
 }

@@ -19,7 +19,9 @@ public fun reduce(
                 state
             }
 
-        GameAction.Reset -> state.copy(pieces = emptySet())
+        GameAction.Tick -> state.copy(elapsedSeconds = state.elapsedSeconds + 1)
+
+        GameAction.Reset -> state.copy(pieces = emptySet(), elapsedSeconds = 0)
     }
 
 private fun Set<Cell>.toggle(cell: Cell): Set<Cell> = if (cell in this) this - cell else this + cell

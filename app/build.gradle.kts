@@ -120,6 +120,7 @@ dependencies {
     implementation(libs.javax.inject)
     testImplementation(libs.compose.ui.geometry)
     implementation(libs.androidx.annotation)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
 
 // Coverage is gated where the screens keep their decisions — the view models. The screens

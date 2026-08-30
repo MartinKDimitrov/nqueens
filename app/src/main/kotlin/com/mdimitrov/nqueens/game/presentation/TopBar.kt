@@ -31,7 +31,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.mdimitrov.nqueens.R
-import com.mdimitrov.nqueens.puzzle.Variant
 import com.mdimitrov.nqueens.theme.HairlineBorder
 import com.mdimitrov.nqueens.theme.NQueensTheme
 import com.mdimitrov.nqueens.theme.Radii
@@ -43,8 +42,7 @@ private val BackButtonSide = 48.dp
 
 @Composable
 internal fun TopBar(
-    piecesLeft: Int,
-    variant: Variant,
+    state: GameUiState,
     onReset: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -82,8 +80,14 @@ internal fun TopBar(
             }
 
             Pill(
-                label = stringResource(variant.text.counter),
-                value = stringResource(R.string.game_counter_value, piecesLeft),
+                label = stringResource(state.variant.text.counter),
+                value = stringResource(R.string.game_counter_value, state.board.piecesLeft),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            )
+
+            Pill(
+                label = stringResource(R.string.game_time),
+                value = formatElapsed(state.elapsedSeconds),
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             )
 

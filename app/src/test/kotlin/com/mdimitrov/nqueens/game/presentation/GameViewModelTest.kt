@@ -8,12 +8,34 @@ import com.mdimitrov.nqueens.domain.Line
 import com.mdimitrov.nqueens.domain.LineKind
 import com.mdimitrov.nqueens.domain.LineRules
 import com.mdimitrov.nqueens.puzzle.Queens
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 
 class GameViewModelTest {
+    private val clock = StandardTestDispatcher()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @BeforeTest
+    fun useATestClock() {
+        Dispatchers.setMain(clock)
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @AfterTest
+    fun releaseTheClock() {
+        Dispatchers.resetMain()
+    }
+
     @Test
     fun `the board starts empty, at the size the route asked for`() {
         val viewModel = gameOf(size = 6)
@@ -92,6 +114,18 @@ class GameViewModelTest {
 
         assertEquals(CellStatus.PIECE, viewModel.uiState.board.statusAt(row = 0, col = 0))
         assertEquals(CellStatus.PIECE, viewModel.uiState.board.statusAt(row = 1, col = 0))
+    }
+
+    @Test
+    fun `the clock counts a second at a time, and reset starts it over`() {
+        val viewModel = gameOf()
+
+        clock.scheduler.advanceTimeBy(3.5.seconds)
+
+        assertEquals(3, viewModel.uiState.elapsedSeconds)
+
+        viewModel.onAction(GameAction.Reset)
+        assertEquals(0, viewModel.uiState.elapsedSeconds)
     }
 
     private fun gameOf(size: Int = 4) =

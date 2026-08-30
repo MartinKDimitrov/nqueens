@@ -72,6 +72,7 @@ class BoardPaintTest {
                         GameUiState(
                             board = snapshotOf(GameState(size = 4, pieces = queens.toSet()), NQueensLines),
                             variant = Queens,
+                            elapsedSeconds = 0,
                         ),
                     onTap = {},
                     onReset = {},

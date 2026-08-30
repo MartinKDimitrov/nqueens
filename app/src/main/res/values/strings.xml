@@ -19,6 +19,7 @@
     <string name="game_tap_hint">Tap a cell to place · tap again to remove</string>
     <string name="game_back">Back to setup</string>
     <string name="game_counter_value">%1$d</string>
+    <string name="game_time">TIME</string>
     <!-- Queens variant -->
     <string name="variant_queens">Queens</string>
     <string name="variant_queens_counter">QUEENS LEFT</string>

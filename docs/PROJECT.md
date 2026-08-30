@@ -33,7 +33,8 @@ Language: Kotlin. UI: Jetpack Compose. DI: Hilt. Build: Gradle with a version ca
 
 ## 4. What is deliberately out of scope
 
-- Best times, and any persistence at all.
+- Nothing is remembered between runs except a solved board: the game itself, the chosen size and
+  a board in progress are all lost when the process dies.
 - Hints and dead-end detection, and the solver they would need. A tested solver that nothing
   calls is weight carried for a feature nobody asked for.
 - Undo. Tapping a queen already takes her back, so undo corrects nothing a second tap does not.
@@ -234,7 +235,7 @@ It belongs to the view model — a coroutine in `viewModelScope` writing into it
 | Wiring              | `MainActivity` launched for real: Start opens a board at the chosen size, takes a queen, marks an attack, resets and goes back |
 | Route guard         | a size the app cannot play sends the player back to Setup instead of reaching the board |
 
-90 tests: 37 in `:core:domain`, 53 in `:app`. Both screens are tested as composables, run on
+93 tests: 39 in `:core:domain`, 54 in `:app`. Both screens are tested as composables, run on
 the JVM under Robolectric, so `check` needs no device. What the tests do not yet cover is
 written down in §6.
 

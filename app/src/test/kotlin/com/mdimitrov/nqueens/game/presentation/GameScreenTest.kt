@@ -183,7 +183,19 @@ class GameScreenTest {
         compose.setContent {
             NQueensTheme {
                 GameContent(
-                    state = GameUiState(uiState(arrayOf(Cell(0, 0), Cell(0, 3), Cell(3, 1)), BOARD_SIZE).board, other),
+                    state =
+                        GameUiState(
+                            uiState(
+                                arrayOf(
+                                    Cell(0, 0),
+                                    Cell(0, 3),
+                                    Cell(3, 1),
+                                ),
+                                BOARD_SIZE,
+                            ).board,
+                            other,
+                            0,
+                        ),
                     onTap = {},
                     onReset = {},
                     onBack = {},
@@ -203,7 +215,7 @@ class GameScreenTest {
         compose.setContent {
             NQueensTheme {
                 GameContent(
-                    state = GameUiState(uiState(arrayOf(Cell(0, 0)), BOARD_SIZE).board, other),
+                    state = GameUiState(uiState(arrayOf(Cell(0, 0)), BOARD_SIZE).board, other, 0),
                     onTap = {},
                     onReset = {},
                     onBack = {},
@@ -227,6 +239,7 @@ class GameScreenTest {
     ) = GameUiState(
         board = snapshotOf(GameState(size = size, pieces = queens.toSet()), NQueensLines),
         variant = Queens,
+        elapsedSeconds = 0,
     )
 
     private fun boardWith(
