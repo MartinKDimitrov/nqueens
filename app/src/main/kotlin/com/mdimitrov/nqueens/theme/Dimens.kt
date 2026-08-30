@@ -2,6 +2,8 @@ package com.mdimitrov.nqueens.theme
 
 import androidx.compose.ui.unit.dp
 
+internal val BoardInset = 6.dp
+
 internal object Spacing {
     val xs = 4.dp
     val sm = 8.dp

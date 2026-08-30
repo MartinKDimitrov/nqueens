@@ -1,7 +1,8 @@
 package com.mdimitrov.nqueens.setup.presentation
 
-import com.mdimitrov.nqueens.LARGEST_PLAYABLE_BOARD
 import com.mdimitrov.nqueens.domain.MIN_BOARD_SIZE
+import com.mdimitrov.nqueens.puzzle.LARGEST_PLAYABLE_BOARD
+import com.mdimitrov.nqueens.puzzle.Queens
 import com.mdimitrov.nqueens.setup.domain.DEFAULT_BOARD_SIZE
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,12 +12,12 @@ import kotlin.test.assertTrue
 class SetupViewModelTest {
     @Test
     fun `the board starts at the default size`() {
-        assertEquals(DEFAULT_BOARD_SIZE, SetupViewModel().uiState.size)
+        assertEquals(DEFAULT_BOARD_SIZE, SetupViewModel(Queens).uiState.size)
     }
 
     @Test
     fun `growing and shrinking move the size by one`() {
-        val viewModel = SetupViewModel()
+        val viewModel = SetupViewModel(Queens)
         val start = viewModel.uiState.size
 
         viewModel.grow()
@@ -28,7 +29,7 @@ class SetupViewModelTest {
 
     @Test
     fun `the size cannot shrink below the smallest board on offer`() {
-        val viewModel = SetupViewModel()
+        val viewModel = SetupViewModel(Queens)
         repeat(LARGEST_PLAYABLE_BOARD - MIN_BOARD_SIZE + 1) { viewModel.shrink() }
 
         assertEquals(MIN_BOARD_SIZE, viewModel.uiState.size)
@@ -38,7 +39,7 @@ class SetupViewModelTest {
 
     @Test
     fun `the size cannot grow past the largest board offered`() {
-        val viewModel = SetupViewModel()
+        val viewModel = SetupViewModel(Queens)
         repeat(LARGEST_PLAYABLE_BOARD - MIN_BOARD_SIZE + 1) { viewModel.grow() }
 
         assertEquals(LARGEST_PLAYABLE_BOARD, viewModel.uiState.size)

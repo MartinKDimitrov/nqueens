@@ -4,7 +4,6 @@
 
     <!-- Setup screen -->
     <string name="setup_title">N-QUEENS</string>
-    <string name="setup_subtitle">Place N queens. No two may attack.</string>
     <string name="setup_board_size_label">BOARD SIZE</string>
     <string name="setup_board_size_value">%1$d × %1$d</string>
     <string name="setup_smaller_board">Smaller board</string>
@@ -12,6 +11,23 @@
     <string name="setup_start">Start</string>
     <string name="setup_size_range">min %1$d — max %2$d</string>
     <string name="setup_variant_label">VARIANT</string>
-    <string name="setup_variant_queens">Queens</string>
     <string name="setup_board_thumbnail">Board preview, %1$d by %1$d</string>
+    <!-- Game screen -->
+    <string name="game_cell_empty">Row %1$d, column %2$d, empty</string>
+    <string name="game_reset">RESET</string>
+    <string name="game_board_summary">%1$d × %1$d · %2$s</string>
+    <string name="game_tap_hint">Tap a cell to place · tap again to remove</string>
+    <string name="game_back">Back to setup</string>
+    <string name="game_counter_value">%1$d</string>
+    <!-- Queens variant -->
+    <string name="variant_queens">Queens</string>
+    <string name="variant_queens_counter">QUEENS LEFT</string>
+    <string name="variant_queens_cell">Row %1$d, column %2$d, queen</string>
+    <string name="variant_queens_cell_attacked">Row %1$d, column %2$d, queen under attack</string>
+    <string name="variant_queens_idle">Tap a cell to place a queen</string>
+    <plurals name="variant_queens_conflict">
+        <item quantity="one">%1$d queen is under attack</item>
+        <item quantity="other">%1$d queens attack each other</item>
+    </plurals>
+    <string name="variant_queens_subtitle">Place N queens. No two may attack.</string>
 </resources>

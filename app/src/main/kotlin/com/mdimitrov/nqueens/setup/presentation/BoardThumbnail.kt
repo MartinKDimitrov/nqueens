@@ -5,10 +5,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -19,6 +20,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.mdimitrov.nqueens.R
+import com.mdimitrov.nqueens.domain.isLightCell
 import com.mdimitrov.nqueens.theme.HairlineBorder
 import com.mdimitrov.nqueens.theme.NQueensTheme
 import com.mdimitrov.nqueens.theme.Radii
@@ -38,7 +40,9 @@ internal fun BoardThumbnail(
     Column(
         modifier =
             modifier
-                .size(ThumbnailSide)
+                .widthIn(max = ThumbnailSide)
+                .fillMaxWidth()
+                .aspectRatio(1f)
                 .clip(RoundedCornerShape(Radii.md))
                 .background(MaterialTheme.colorScheme.surface)
                 .border(HairlineBorder, board.border, RoundedCornerShape(Radii.md))
@@ -48,7 +52,7 @@ internal fun BoardThumbnail(
         for (row in 0 until boardSize) {
             Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 for (col in 0 until boardSize) {
-                    val light = (row + col) % 2 == 0
+                    val light = isLightCell(row, col)
                     Box(
                         modifier =
                             Modifier

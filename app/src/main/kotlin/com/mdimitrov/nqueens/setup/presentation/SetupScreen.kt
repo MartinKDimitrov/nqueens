@@ -3,7 +3,6 @@ package com.mdimitrov.nqueens.setup.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,11 +10,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,10 +34,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.mdimitrov.nqueens.LARGEST_PLAYABLE_BOARD
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.mdimitrov.nqueens.R
 import com.mdimitrov.nqueens.domain.MIN_BOARD_SIZE
+import com.mdimitrov.nqueens.puzzle.LARGEST_PLAYABLE_BOARD
+import com.mdimitrov.nqueens.puzzle.Queens
+import com.mdimitrov.nqueens.puzzle.Variant
 import com.mdimitrov.nqueens.theme.HairlineBorder
 import com.mdimitrov.nqueens.theme.NQueensTheme
 import com.mdimitrov.nqueens.theme.Radii
@@ -45,7 +49,7 @@ private val StepperHeight = 68.dp
 private val StepperButtonSide = 40.dp
 private val VariantRowHeight = 56.dp
 private val StartButtonHeight = 60.dp
-private val QueenIconSide = 22.dp
+private val PieceIconSide = 22.dp
 private val TitleLetterSpacing = 1.5.sp
 private const val DISABLED_ALPHA = 0.4f
 
@@ -53,7 +57,7 @@ private const val DISABLED_ALPHA = 0.4f
 internal fun SetupScreen(
     onStart: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: SetupViewModel = viewModel(),
+    viewModel: SetupViewModel = hiltViewModel(),
 ) {
     SetupContent(
         state = viewModel.uiState,
@@ -78,6 +82,7 @@ internal fun SetupContent(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .safeDrawingPadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.lg, vertical = Spacing.xl),
     ) {
         Text(
@@ -88,7 +93,7 @@ internal fun SetupContent(
         )
         Spacer(Modifier.height(Spacing.sm))
         Text(
-            text = stringResource(R.string.setup_subtitle),
+            text = stringResource(state.variant.text.subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = NQueensTheme.board.onSurfaceMuted,
         )
@@ -107,7 +112,7 @@ internal fun SetupContent(
         Spacer(Modifier.height(Spacing.lg))
         SectionLabel(stringResource(R.string.setup_variant_label))
         Spacer(Modifier.height(Spacing.sm))
-        VariantRow()
+        VariantRow(variant = state.variant)
 
         Spacer(Modifier.height(Spacing.xl))
         Button(
@@ -149,12 +154,11 @@ private fun BoardSizeStepper(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(StepperHeight)
+                .heightIn(min = StepperHeight)
                 .clip(RoundedCornerShape(Radii.md))
                 .background(MaterialTheme.colorScheme.surface)
                 .border(HairlineBorder, board.border, RoundedCornerShape(Radii.md))
                 .padding(horizontal = Spacing.md),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         StepperButton(
@@ -164,7 +168,10 @@ private fun BoardSizeStepper(
             colors = StepperColors(board.surfaceAlt, MaterialTheme.colorScheme.onSurface),
             onClick = onShrink,
         )
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier.weight(1f).padding(horizontal = Spacing.sm),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Text(
                 text = stringResource(R.string.setup_board_size_value, state.size),
                 style = MaterialTheme.typography.headlineSmall,
@@ -219,14 +226,17 @@ private fun StepperButton(
 }
 
 @Composable
-private fun VariantRow(modifier: Modifier = Modifier) {
+private fun VariantRow(
+    variant: Variant,
+    modifier: Modifier = Modifier,
+) {
     val board = NQueensTheme.board
 
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(VariantRowHeight)
+                .heightIn(min = VariantRowHeight)
                 .clip(RoundedCornerShape(Radii.md))
                 .background(MaterialTheme.colorScheme.surface)
                 .border(HairlineBorder, board.border, RoundedCornerShape(Radii.md))
@@ -234,14 +244,14 @@ private fun VariantRow(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            painter = painterResource(R.drawable.ic_queen),
+            painter = painterResource(variant.piece),
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(QueenIconSide),
+            modifier = Modifier.size(PieceIconSide),
         )
         Spacer(Modifier.width(Spacing.md))
         Text(
-            text = stringResource(R.string.setup_variant_queens),
+            text = stringResource(variant.name),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
@@ -258,7 +268,7 @@ private fun dimmedUnless(
 private fun SetupSmallestPreview() {
     NQueensTheme {
         SetupContent(
-            state = SetupUiState(MIN_BOARD_SIZE),
+            state = SetupUiState(MIN_BOARD_SIZE, Queens),
             onShrink = {},
             onGrow = {},
             onStart = {},
@@ -271,7 +281,7 @@ private fun SetupSmallestPreview() {
 private fun SetupLargestDarkPreview() {
     NQueensTheme(darkTheme = true) {
         SetupContent(
-            state = SetupUiState(LARGEST_PLAYABLE_BOARD),
+            state = SetupUiState(LARGEST_PLAYABLE_BOARD, Queens),
             onShrink = {},
             onGrow = {},
             onStart = {},

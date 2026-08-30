@@ -17,6 +17,7 @@ internal data class BoardColors(
     val queen: Color,
     val conflict: Color,
     val conflictGlow: Color,
+    val hint: Color,
     val border: Color,
     val surfaceAlt: Color,
     val onSurfaceMuted: Color,
@@ -62,6 +63,7 @@ private val LightBoard =
         border = LightBorder,
         surfaceAlt = LightSurfaceAlt,
         onSurfaceMuted = LightOnSurfaceMuted,
+        hint = LightHint,
     )
 
 private val DarkBoard =
@@ -74,6 +76,7 @@ private val DarkBoard =
         border = DarkBorder,
         surfaceAlt = DarkSurfaceAlt,
         onSurfaceMuted = DarkOnSurfaceMuted,
+        hint = DarkHint,
     )
 
 @Composable
