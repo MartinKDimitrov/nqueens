@@ -19,9 +19,9 @@ import com.mdimitrov.nqueens.theme.NQueensTheme
 
 internal const val CELEBRATION_TAG = "celebration"
 
-// The celebration design/win.svg sketches as a still: a burst that is in by a fifth of the way
-// and gone by the end. It is a function of one number, so what is drawn can be replaced without
-// touching what decides when to draw it (TRADEOFFS D6).
+// The celebration design/screens/win.svg sketches as a still: a burst that is up within the
+// first sixth of a piece's flight and gone by the end. It is a function of one number, so what
+// is drawn can be replaced without touching what decides when to draw it (TRADEOFFS D6).
 private const val CELEBRATION_MILLIS = 3_400
 private const val STAGGER = 0.3f
 private const val FADE_FROM = 0.6f
@@ -32,7 +32,10 @@ private const val HALF_TURN = 180f
 private val PieceSide = 14.dp
 private val PieceCorner = 2.dp
 
-/** Where the six pieces of design/win.svg come to rest, in fractions of the screen. */
+/**
+ * Where the pieces come to rest, in fractions of the screen. The first six are the ones
+ * design/screens/win.svg draws; the rest are here because six read as a diagram once they move.
+ */
 internal val ConfettiRest =
     listOf(
         0.14f to 0.18f,
@@ -92,6 +95,15 @@ internal fun confettiAt(
     )
 }
 
+/**
+ * How far behind the first piece the one at `index` leaves: 0 for the first, 1 for the last.
+ * A single piece leaves at once rather than dividing by nothing.
+ */
+internal fun leadOf(
+    index: Int,
+    pieces: Int,
+): Float = if (pieces < 2) 0f else index.toFloat() / (pieces - 1)
+
 @Composable
 internal fun Celebration(modifier: Modifier = Modifier) {
     val colors = NQueensTheme.board
@@ -107,7 +119,7 @@ internal fun Celebration(modifier: Modifier = Modifier) {
 
     Canvas(modifier = modifier.testTag(CELEBRATION_TAG)) {
         ConfettiRest.forEachIndexed { index, rest ->
-            val lead = index.toFloat() / (ConfettiRest.size - 1)
+            val lead = leadOf(index, ConfettiRest.size)
             val piece = confettiAt(progress.value, rest, lead)
             val side = PieceSide.toPx() * piece.scale
             val centre = Offset(piece.x * size.width, piece.y * size.height)
