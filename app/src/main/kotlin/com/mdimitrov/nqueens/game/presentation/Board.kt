@@ -93,6 +93,7 @@ private fun Square(
     val colors = NQueensTheme.board
     val tint = queenTint(status, colors)
     val haptics = LocalHapticFeedback.current
+    val sounds = LocalSounds.current
 
     val description =
         when (status) {
@@ -108,6 +109,7 @@ private fun Square(
                 .clickable(enabled = onTap != null) {
                     // A queen answers the finger the way a piece answers the hand.
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    sounds.play(if (status == CellStatus.EMPTY) GameSound.PLACE else GameSound.REMOVE)
                     onTap?.invoke(cell)
                 }
                 .semantics { contentDescription = description },

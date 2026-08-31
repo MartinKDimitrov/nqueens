@@ -26,6 +26,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,17 +73,19 @@ internal fun GameScreen(
     modifier: Modifier = Modifier,
     viewModel: GameViewModel = hiltViewModel(),
 ) {
-    GameContent(
-        state = viewModel.uiState,
-        actions =
-            GameActions(
-                onTap = { cell -> viewModel.onAction(GameAction.Toggle(cell)) },
-                onReset = { viewModel.onAction(GameAction.Reset) },
-                onBack = onBack,
-                onScores = onScores,
-            ),
-        modifier = modifier,
-    )
+    CompositionLocalProvider(LocalSounds provides rememberSounds()) {
+        GameContent(
+            state = viewModel.uiState,
+            actions =
+                GameActions(
+                    onTap = { cell -> viewModel.onAction(GameAction.Toggle(cell)) },
+                    onReset = { viewModel.onAction(GameAction.Reset) },
+                    onBack = onBack,
+                    onScores = onScores,
+                ),
+            modifier = modifier,
+        )
+    }
 }
 
 // Android Studio's inspection reports this scope as unused although `maxWidth` and `maxHeight`
@@ -93,6 +101,17 @@ internal fun GameContent(
     // A solved board keeps its shape but stops answering: no handler, so a square offers no tap
     // to anyone — a finger or TalkBack alike.
     val taps = if (state.board.isSolved) null else actions.onTap
+
+    val sounds = LocalSounds.current
+
+    // Only the move that creates a new attack is heard: a board that stays in trouble would
+    // otherwise sound the alarm again on every move after the first.
+    var attackedBefore by remember { mutableIntStateOf(state.board.piecesUnderAttack) }
+    LaunchedEffect(state.board.piecesUnderAttack) {
+        val attacked = state.board.piecesUnderAttack
+        if (attacked > attackedBefore) sounds.play(GameSound.CONFLICT)
+        attackedBefore = attacked
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(

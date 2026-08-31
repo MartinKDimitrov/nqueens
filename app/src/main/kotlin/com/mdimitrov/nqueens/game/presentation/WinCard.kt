@@ -58,9 +58,11 @@ internal fun WinCard(
 ) {
     // The card arrives on its own, so it is also felt on its own.
     val haptics = LocalHapticFeedback.current
+    val sounds = LocalSounds.current
 
     LaunchedEffect(Unit) {
         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        sounds.play(GameSound.WIN)
     }
 
     Box(modifier = modifier.fillMaxSize()) {

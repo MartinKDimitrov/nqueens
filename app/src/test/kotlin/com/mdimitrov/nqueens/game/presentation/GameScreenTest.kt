@@ -1,6 +1,7 @@
 package com.mdimitrov.nqueens.game.presentation
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -54,7 +55,7 @@ class GameScreenTest {
     @get:Rule
     val compose = createComposeRule()
     private val felt = mutableListOf<HapticFeedbackType>()
-
+    private val played = mutableListOf<GameSound>()
     private val haptics =
         object : HapticFeedback {
             override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {
@@ -446,6 +447,52 @@ class GameScreenTest {
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
     }
 
+    @Test
+    fun `placing a queen is heard, and taking her back sounds different`() {
+        boardWith(Cell(0, 0))
+
+        compose.onNodeWithContentDescription("Row 1, column 1, queen").performClick()
+        compose.onNodeWithContentDescription(square(2)).performClick()
+
+        assertEquals(listOf(GameSound.REMOVE, GameSound.PLACE), played)
+    }
+
+    @Test
+    fun `a move that puts a queen under attack sounds once, and easing the trouble is quiet`() {
+        val shown = mutableStateOf(uiState(arrayOf(Cell(0, 0)), BOARD_SIZE))
+        compose.setContent {
+            CompositionLocalProvider(
+                LocalHapticFeedback provides haptics,
+                LocalSounds provides Sounds { played += it },
+            ) {
+                NQueensTheme {
+                    GameContent(
+                        state = shown.value,
+                        actions = GameActions(onTap = {}, onReset = {}, onBack = {}, onScores = {}),
+                    )
+                }
+            }
+        }
+
+        shown.value = uiState(arrayOf(Cell(0, 0), Cell(0, 3), Cell(1, 1)), BOARD_SIZE)
+        compose.waitForIdle()
+        assertEquals(listOf(GameSound.CONFLICT), played, "the move that created the attack")
+
+        // Three queens under attack become two: the board is still in trouble, but this move
+        // eased it rather than caused it.
+        shown.value = uiState(arrayOf(Cell(0, 0), Cell(1, 1)), BOARD_SIZE)
+        compose.waitForIdle()
+        assertEquals(listOf(GameSound.CONFLICT), played, "an attack resolved is not an attack made")
+    }
+
+    @Test
+    fun `a solved board is heard as well as felt`() {
+        solvedBoard(elapsed = WINNING_TIME, previousBest = null)
+        compose.waitForIdle()
+
+        assertEquals(listOf(GameSound.WIN), played)
+    }
+
     private fun square(n: Int) = "Row $n, column $n, empty"
 
     private fun uiState(
@@ -463,7 +510,10 @@ class GameScreenTest {
     ) {
         val solved = uiState(arrayOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2)), BOARD_SIZE).board
         compose.setContent {
-            CompositionLocalProvider(LocalHapticFeedback provides haptics) {
+            CompositionLocalProvider(
+                LocalHapticFeedback provides haptics,
+                LocalSounds provides Sounds { played += it },
+            ) {
                 NQueensTheme {
                     GameContent(
                         state = GameUiState(solved, Queens, elapsed, previousBest),
@@ -482,7 +532,10 @@ class GameScreenTest {
         onBack: () -> Unit = {},
     ) {
         compose.setContent {
-            CompositionLocalProvider(LocalHapticFeedback provides haptics) {
+            CompositionLocalProvider(
+                LocalHapticFeedback provides haptics,
+                LocalSounds provides Sounds { played += it },
+            ) {
                 NQueensTheme {
                     GameContent(
                         state = uiState(queens, size),

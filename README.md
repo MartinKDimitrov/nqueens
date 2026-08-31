@@ -11,7 +11,8 @@ many are still to place, a clock runs beside it, and reset clears the board. Sol
 board is covered by a card that names the size, the variant and the finishing time, says by how
 much it beat your best, and offers another game or the records. Solved boards are kept in a
 database and listed under "Best times", where a row is deleted on its own and everything can be
-cleared at once.
+cleared at once. Every move is felt and heard — a piece set down, a piece lifted, a piece falling
+under attack, a board solved — and the game is quiet while the phone is.
 
 Not built yet: the placement animation — a queen that lands with a bounce, a shake when she comes
 under attack.
@@ -75,7 +76,7 @@ To have the gate run before every commit:
 git config core.hooksPath .githooks
 ```
 
-**174 tests**: 40 in the domain, 3 in the data module, 131 in the app. The domain is gated at 90% line and 90% branch
+**178 tests**: 40 in the domain, 3 in the data module, 135 in the app. The domain is gated at 90% line and 90% branch
 coverage and currently sits at 100% and 98.89%; view models are gated at 85% line. The screens
 are covered by running them, not by counting their lines: code executed under Robolectric is
 invisible to JaCoCo, so their coverage reads as zero and means nothing.
@@ -156,7 +157,8 @@ app/
   game/
     presentation/     ui state, actions, view model, screen, top bar, board,
                       how a square is painted, the win card and the celebration
-                      over a solved board, and the route that carries the size
+                      over a solved board, the sounds it makes, and the route
+                      that carries the size
   history/
     domain/           a solved board, the repository that keeps them, and the
                       clock a record is stamped with
@@ -165,7 +167,8 @@ app/
     presentation/     the records screen: view model, state, screen and the
                       moment a record is drawn with
 app/schemas/          the database's schema history, checked in
-design/               design reference: tokens, screen SVGs, the queen icon
+design/               design reference: tokens, screen SVGs, the queen icon,
+                      and the script that generates the four sounds
 docs/                 what this is, why it is shaped this way, and the plan
 ```
 
