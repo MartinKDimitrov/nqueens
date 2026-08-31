@@ -28,7 +28,9 @@ drawn from those values; never introduce a color that is not in `tokens.json`.
   conflict colour is never drawn on a plain board square in either theme. The rest of the list is
   about states the mockups define and the app does not: dark falls short at `blocked` on
   `surface` (2.79:1) and `fixed` on `boardLight` (4.38:1), light at `hint` on `surface` (2.09:1),
-  `success` on `surface` (3.45:1) and `blocked` on `surface` (2.59:1) and on `boardDark`
+  `success` on `surface` (3.45:1), which the win card's "new best" line does draw, `conflict` on
+  `background` (4.20:1), which the records screen's **Clear all** draws, `blocked` on `surface`
+  (2.59:1) and on `boardDark`
   (1.44:1). The conflict pairing is the one that matters, since it is the state the game relies
   on. The shipped square marks it with a tinted background
   and a tinted glyph; the outline the mockup draws is not there, so the non-visual carrier is
@@ -43,7 +45,8 @@ Title block, a preview of the board at the chosen size, a board-size stepper
 above the safe area, with the current best time for the selected size below it.
 
 *Implemented differently:* the app has one puzzle, so the variant control is a row that shows it
-rather than a dropdown, and there is no best time because nothing is stored. The preview draws
+rather than a dropdown, and where the mockup prints the best time the app puts an outlined
+**Best times** button that opens the records instead. The preview draws
 an empty board at the chosen size; the mockup draws a solved eight-queen one. Start follows the
 controls rather than being anchored to the bottom, and the column scrolls, so on a screen too
 short for the whole of it — a phone held sideways — the button is still reachable.
@@ -56,8 +59,9 @@ Bottom bar: two equal-width secondary buttons, **Undo** and **Hint**.
 
 *Implemented differently:* on a screen wider than it is tall the board sits at the left with the
 summary, the strip and the hint beside it; the mockup only draws the tall arrangement. The top
-bar carries a back button at the left and two pills, not
-three — there is no timer yet. The pills share a height rather than having a fixed one, so they
+bar carries a back button and three pills — the counter, the clock and reset — beside each other
+on a window at least 340 dp wide, and the back button above them on anything narrower, where the
+back button and the three pills cannot share a line without breaking the clock across two. The pills share a height rather than having a fixed one, so they
 grow together when the player raises the system font size, and the status strip's mark is sized
 in `sp` so it tracks the type rather than outgrowing it. `game.svg` does not draw the back
 button, because the mockup
@@ -88,6 +92,14 @@ Best times grouped by board size, one `surface` card per size, rows of
 rank badge / monospaced time / date. Rank 1 uses the `primary` badge. A
 **New game** button closes the screen.
 
+*Implemented differently:* the times are drawn in the app's own type scale — no font family from
+the tokens reaches the code, so nothing is monospaced. Each row carries a delete button and the
+header a **Clear all**, neither of which the mockup draws, because a record nobody can remove is
+permanent; the label of that button names the moment the board was finished, since two equally
+fast solves of one board are otherwise indistinguishable to a screen reader. A card lists every
+solve of its size a row at a time, and **New game** stays on screen while the list scrolls under
+it.
+
 ### Legend (`legend.svg`)
 Every cell state at real board scale with its name and backing token.
 
@@ -110,14 +122,17 @@ time, so the two are kept in step by review rather than by a check.
 - Material's own roles — primary, surface, background, error — go into the Compose colour
   scheme. The colours Material has no name for travel beside it in `BoardColors`, through a
   `CompositionLocal`: `boardLight`, `boardDark`, `queen`, `conflict`, `conflictGlow`, `hint`,
-  `border`, `surfaceAlt`, `onSurfaceMuted`. `hint` marks the status strip while the board is
-  quiet. The tokens for states that do not exist — `blocked`, `fixed`, `success`, `queenOn` —
-  are not in the code.
+  `border`, `surfaceAlt`, `onSurfaceMuted`, `success`. `hint` marks the status strip while the
+  board is quiet; `success` colours the win card's badge, its "new best" line and the confetti.
+  The tokens for states that do not exist — `blocked`, `fixed`, `queenOn` — are not in the code.
+  `success` and `hint` also take a third of the confetti each, beside `primary`.
 - `typography.scale` maps onto the Material text styles by size, weight and line height.
   `letterSpacing` is not carried across; the one place the app sets it, the Setup title, uses a
   wider value than the token because the design draws the title spaced out.
-- `spacing` and `radii` become `Spacing` and `Radii` in `theme/Dimens.kt`, in dp, each carrying
-  every step the tokens define. `elevation` is unused: nothing in the app casts a shadow.
+- `spacing` and `radii` become `Spacing` and `Radii` in `theme/Dimens.kt`, in dp. `Radii` also
+  carries an `lg` of 20 dp that the tokens do not define — it is the corner `win.svg` draws on the
+  card, and the clear-all dialog uses it too. Of `elevation`, only `high` is transcribed, for the
+  win card's shadow; `low` is not in the code.
 - `queen.svg` is converted to `res/drawable/ic_queen.xml`, tinted by the caller. The same paths,
   white on the brand teal, make `res/drawable/ic_launcher.xml`.
 - Cell state in code is one of three values — `EMPTY`, `PIECE`, `PIECE_CONFLICT`.

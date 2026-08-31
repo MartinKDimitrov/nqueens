@@ -7,9 +7,14 @@ no shared row, column, or diagonal.
 
 **The game plays.** Choose a board between 4 and 12 on the Setup screen, then place and remove
 queens by tapping. Queens that threaten each other are marked as you go, a counter tracks how
-many are still to place, and reset clears the board.
+many are still to place, a clock runs beside it, and reset clears the board. Solve it and the
+board is covered by a card that names the size, the variant and the finishing time, says by how
+much it beat your best, and offers another game or the records. Solved boards are kept in a
+database and listed under "Best times", where a row is deleted on its own and everything can be
+cleared at once.
 
-Not built yet: the elapsed timer, the win state and the animations that go with them.
+Not built yet: the placement animation — a queen that lands with a bounce, a shake when she comes
+under attack.
 
 What is deliberately absent, and why, is in [`docs/PROJECT.md`](docs/PROJECT.md).
 
@@ -50,18 +55,19 @@ Formatting is fixed rather than reported by:
 ./gradlew spotlessApply
 ```
 
-Just the tests, which need no device and take about fifteen seconds:
+Just the tests, which need no device and take about twenty-five seconds:
 
 ```bash
 ./gradlew :core:domain:test :core:data:testDebugUnitTest :app:testDebugUnitTest
 ```
 
-Fifteen seconds is a warm build. The first run downloads Robolectric's Android runtime (a few
+That is a warm build. The first run downloads Robolectric's Android runtime (a few
 hundred megabytes, cached afterwards) and compiles everything including annotation processing,
 which takes a few minutes.
 
-Reports land under each module's `build/reports/` — tests, coverage and detekt each write their
-own, and Android lint writes its own under `app/` and `core/data/`, the two modules it runs on.
+Reports land under each module's `build/reports/` — tests and detekt everywhere, coverage where
+JaCoCo runs (`core/domain/` and `app/`, not `core/data/`), and Android lint under `app/` and
+`core/data/`, the two modules it runs on.
 
 To have the gate run before every commit:
 
@@ -69,8 +75,8 @@ To have the gate run before every commit:
 git config core.hooksPath .githooks
 ```
 
-**126 tests**: 39 in the domain, 2 in the data module, 85 in the app. The domain is gated at 90% line and 90% branch
-coverage and currently sits at 100% and 98.78%; view models are gated at 85% line. The screens
+**168 tests**: 40 in the domain, 3 in the data module, 125 in the app. The domain is gated at 90% line and 90% branch
+coverage and currently sits at 100% and 98.89%; view models are gated at 85% line. The screens
 are covered by running them, not by counting their lines: code executed under Robolectric is
 invisible to JaCoCo, so their coverage reads as zero and means nothing.
 
@@ -121,7 +127,7 @@ restatement of the code.
 The reducer is table-driven — a list of `state × action → expected state` cases, each carrying
 its own description so a failure names itself.
 
-Both screens are tested as composables, run on the JVM under Robolectric so they stay inside
+All three screens are tested as composables, run on the JVM under Robolectric so they stay inside
 `make check` and need no device. The board's squares carry no text, only colour, so the tests
 find them by the same content descriptions that make the board usable with a screen reader —
 one piece of work serving both.
@@ -134,19 +140,31 @@ assembles them. Without that, the whole wiring could be removed and the suite wo
 
 ```
 core/domain/          the game, in pure Kotlin
+core/data/            how a database is opened, and nothing else
 app/
   MainActivity.kt
   NQueensApplication.kt
   NQueensNavHost.kt
   puzzle/             which puzzle this is — its name, its piece, its rules —
                       and the largest board the app will play
+  format/             what more than one screen prints: the elapsed time
+  storage/            the one database the features' tables live in
   theme/              colours, type and dimensions from design/tokens.json
   setup/
     domain/           the size the stepper starts on
-    presentation/     ui state, view model, screen, board thumbnail
+    presentation/     ui state, actions, view model, screen, board thumbnail
   game/
-    presentation/     ui state, view model, screen, top bar, board, how a
-                      square is painted, and the route that carries the size
+    presentation/     ui state, actions, view model, screen, top bar, board,
+                      how a square is painted, the win card and the celebration
+                      over a solved board, and the route that carries the size
+  history/
+    domain/           a solved board, the repository that keeps them, and the
+                      clock a record is stamped with
+    data/             the table, its queries, the repository over them and
+                      the bindings
+    presentation/     the records screen: view model, state, screen and the
+                      moment a record is drawn with
+app/schemas/          the database's schema history, checked in
 design/               design reference: tokens, screen SVGs, the queen icon
 docs/                 what this is, why it is shaped this way, and the plan
 ```

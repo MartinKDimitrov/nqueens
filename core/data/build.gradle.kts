@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 // How this app opens a database, and nothing else: no table, no query, no name of its own.
-// A feature brings its own tables and asks here for the connection.
+// What is opened, and the tables in it, belong to the app above.
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)

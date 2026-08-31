@@ -9,7 +9,7 @@ This is the reasoning behind the shape of the code.
 
 **Context.** On every tap the board must be re-validated and the *set* of conflicting queens
 returned, so the UI can highlight them. Whatever does this must not hard-code the geometry of
-a queen, or adding a variant stops being a domain-only change.
+a queen, or the validator has to be rewritten whenever the rules change.
 
 **Options.**
 - **A — Pairwise** over `PuzzleRules.attacks`: `O(k²)`. Works for any rule, including ones
@@ -26,7 +26,8 @@ the general case; `LineRules.linesThrough(cell)` is the structural form the game
 than one. **A is kept as the test oracle. Bitmask is not used for validation.**
 
 **Why.** The UI needs the conflict *set*, not a boolean, which rules out D. B is fast but puts
-queen geometry in the validator, so a variant stops being one new rule. C keeps both: `O(k)`
+queen geometry in the validator, so the rules and the validator stop being separable. C keeps
+both: `O(k)`
 detection, and the geometry supplied by whichever rule is in play.
 
 Counting also removes the identity-pair problem for free: a lone queen occupies each of its
@@ -65,12 +66,13 @@ queens, or fall back to set-based backtracking.
 
 ## D3 — State management: MVI for Game, MVVM for Setup (v1)
 
-**Decision.** **MVI on Game, MVVM on Setup.** Best times are out of scope, so there is no
-Scores screen; were one built it would be MVVM, being a list read from a repository.
+**Decision.** **MVI on Game, MVVM on Setup and on Scores** — the records are a list read from a
+repository and two commands over it, which is what MVVM is for.
 
-**Why.** Game is a state machine — every move is one action through one reducer — and it is the
-screen extended live, so "one action, one reducer branch" is the uniformity that pays off. The
-win state will add the first one-shot effect; the shape is already there for it.
+**Why.** Game is a state machine — every move is one action through one reducer — and it is where
+the whole game happens, so "one action, one reducer branch" is the uniformity that pays off. The
+win state added no one-shot effect after all: the card is drawn from `BoardSnapshot.isSolved`,
+which the screen already reads, so there is still nothing an effect channel would carry.
 Setup is simple input; MVI would be overhead. Match the pattern to the complexity.
 
 **Revisit if.** Setup grows real interactive complexity (e.g. a puzzle editor).
@@ -93,11 +95,16 @@ database rather than a mock, so the queries themselves are exercised. What a vie
 is the repository, so a second source later is a change behind it and not in front of it.
 
 `:core:data` is the third module, and it holds **only what it takes to open a database**: no
-entity, no DAO, no query. A feature declares its own `@Database` with the tables and queries it
-needs and asks `:core:data` for a connection, so its persistence travels with it and a feature
-could be lifted into a module of its own without touching the core. The price is a file per
-feature — two Room databases must not be pointed at one file — so `solves.db` belongs to the
-history feature alone, and a second feature that wants storage gets its own.
+entity, no DAO, no query. Above the features sits one database, `puzzle.db`: a feature that wants
+storage adds its table to it rather than opening a file of its own, because two Room databases
+pointed at one file corrupt each other and a file per feature would multiply what has to be
+opened, migrated and backed up.
+
+What a feature owns is its table, its queries and the repository over them; what it does not own
+is the database. Room needs every entity of a database declared in one place, so `PuzzleDatabase`
+names each feature's table and hands out the accessor each reads its own through — the one place
+in the app where a feature's names are known outside it, and the reason it lives beside them
+rather than inside one of them.
 
 **Why.** A separate `:core:domain` lets the compiler forbid Android in the domain. Adding
 `:core:data` before there is anything to persist would be a module with no content and a
@@ -121,7 +128,7 @@ raising, so a back stack restored after the process died cannot crash the app, a
 a deep link if one were ever declared — the app declares none today.
 
 **Why.** Placing freely and seeing the conflicts is how the puzzle is played. Building the
-reject path before a variant needs it would be a branch nothing takes and no test could justify.
+reject path with nothing to refuse would be a branch nothing takes and no test could justify.
 
 **Cost, accepted.** Blocked or given squares are therefore *not* a one-line change: they touch
 `GameState` (a field), `reduce` (a branch), `CellStatus` (values) and `snapshotOf`. Four places,
@@ -135,8 +142,10 @@ not one — better stated plainly than claimed as an isolation that does not exi
 
 **Decision.** **The victory celebration is drawn in Compose**, in a layer of its own between the
 scrim and the card: eighteen pieces travel out from the middle, grow, turn half a circle and fade.
-**No animation library is a dependency.** The motion is small enough to state as a function, and
-an artifact nothing executes is weight rather than readiness.
+**No third-party animation library is a dependency.** The motion is small enough to state as a
+function, and an artifact nothing executes is weight rather than readiness. What produces the
+number is Compose's own `animation-core`: one `Animatable` runs from 0 to 1 and everything drawn
+is a pure function of it.
 
 **Why.** The full-screen win is where an animation pays off most, and the domain stays
 animation-agnostic: what moves is a pure function of one number, in the presentation layer alone.
@@ -155,13 +164,14 @@ it when.
 
 ## D7 — Dependency injection: Hilt
 
-**Decision.** **Hilt, for the one dependency there is.** `PuzzleModule` provides the `Variant` —
+**Decision.** **Hilt.** `PuzzleModule` provides the `Variant` —
 the puzzle's name, its piece and its rules — and both view models receive it: the game plays by
 it, and Setup names it in the variant row.
 
-**Why so little.** The container was wired in the step that needed it, not before: annotations a
-reviewer has to read past to find the code are a cost, and one binding is what the app has to
-show for them. The seam does not rest on the container either — `conflicts` and `snapshotOf`
+**Why.** The container was wired in the step that needed it, not before: annotations a reviewer
+has to read past to find the code are a cost. It carried one binding for as long as the app had
+one dependency; persistence made it six, across five modules — the variant, the connection, the
+puzzle's database, its DAO, the repository over it and the clock a record is stamped with. The seam does not rest on the container either — `conflicts` and `snapshotOf`
 take rules with **no default**, so no call site can silently assume N-Queens even where nothing
 is injected.
 
@@ -186,7 +196,7 @@ solution counts (OEIS A000170). Screens are rendered inside `check` under Robole
 tests hand a board straight to the content composable, and a few launch `MainActivity` so the
 container, the navigation host and the route argument are exercised as the app assembles them.
 A rendered test reads the semantics tree, not the pixels, so the square's paint decisions are a
-pure function tested on its own — and then one test class does read the pixels: Robolectric
+pure function tested on its own — and then two test classes do read the pixels: Robolectric
 rasterises under `@GraphicsMode(NATIVE)`, the window is drawn into a bitmap, and the colour under
 a named square is compared against the token it should carry. That is not screenshot testing:
 there are no golden images to review or to keep, only integer comparisons against
@@ -213,7 +223,7 @@ anything, or is skipped outright because its coverage data has moved — so
 Neither the feature nor its machinery is built.
 
 **Why.** A guaranteed-solvable hint needs a solver and its own UI. Building the solver first
-would leave tested code with no caller, so the seam is left open and nothing is written for it.
+would leave tested code with no caller, so nothing is written for it.
 
 ---
 
@@ -221,8 +231,8 @@ would leave tested code with no caller, so the seam is left open and nothing is 
 
 **Decision.** No signing/release step in the plan.
 
-**Why.** A conscious omission for a take-home: the deliverable is source + a short demo
-video, not a Play Store artifact. Noted so it is a decision, not a gap.
+**Why.** A conscious omission: the deliverable is source and a short demo video, not a Play
+Store artifact. Noted so it is a decision, not a gap.
 
 
 ---
@@ -283,18 +293,21 @@ separate axis, and it is the same on both screens.
 
 ---
 
-## D14 — A solved board stores its variant as a string resource id
+## D14 — A solved board names its puzzle with a key of its own
 
-**Options.** A stable key of the feature's own (`"queens"`), translated to a resource when the
-row is drawn; the `@StringRes` id itself; the whole `Variant` serialised.
+**Options.** A stable key of the feature's own (`"queens"`); the `@StringRes` id that names the
+puzzle on screen; the whole `Variant` serialised.
 
-**Decision.** The **`@StringRes` id**, written into the row and read back through
-`stringResource`. One column, one lookup, and no second table of names to keep in step with the
-variants.
+**Decision.** **The key.** `Variant.key` is written into the row and never leaves the feature;
+what a screen shows is looked up from the `Variant` the app is playing, not from the row.
 
-**Cost.** Resource ids are assigned at build time. They hold for a given build and for any build
-that leaves the resources alone, but removing or renaming a resource shifts the ids around it, and
-a row written by an older build then names a different string — or none at all, where
-`stringResource` throws. Nothing in the build detects it. Changing the variants therefore means a
-migration that rewrites the column.
+**Why not the resource id, which was the first decision here.** Resource ids are assigned when the
+resource table is built, in alphabetical order of resource name, so adding or removing a string
+that sorts before `variant_queens` renumbers it. That was a documented cost while the column was
+inert. It stopped being a cost and became a defect once the best time was asked per size **and**
+variant: after such a build every row written by the previous one fails to match, and the win card
+silently never reports a best time again for a board the player has already solved.
 
+**Cost.** None yet. Nothing has been released, so no file on any device holds the old column and
+there is no migration to write — the first version is the one with the key. The schema is exported
+to `app/schemas/`, which is what the first real migration will be written and tested against.

@@ -35,7 +35,7 @@ on a real defect:
 |----------------------|-----------------------------------------------------------------|
 | format               | Spotless (ktlint) — `spotlessCheck`                             |
 | static analysis      | detekt (built upon its default ruleset)                         |
-| type strictness      | Kotlin `allWarningsAsErrors`; `explicitApi()` on `:core:domain` |
+| type strictness      | Kotlin `allWarningsAsErrors`; `explicitApi()` on both `:core:` modules |
 | tests                | JUnit4 + `kotlin.test`; property tests use a **seeded** `Random`|
 | coverage floor       | `jacocoTestCoverageVerification` for the domain, `viewModelCoverageInputs` + `viewModelCoverageVerification` for `:app` |
 | dependency hygiene   | `dependency-analysis` `buildHealth`, applied to **every module**, failing on any advice |
@@ -194,7 +194,7 @@ or written down as a known gap in the document that would otherwise overstate th
   cannot play).
 
 **Step 6.3 — Elapsed timer.** *(built)*
-- Elapsed time in the top bar's third pill, reset together with the board. The count is part of
+- Elapsed time in the top bar, between the counter and reset, restarted with the board. The count is part of
   `GameState` and grows through a `Tick` action, so every change — a tap, a reset, a second — goes
   through `reduce` and there is one state. What stays outside is the clock itself: a coroutine in
   the view model decides when a tick happens, which is the part that is neither pure nor
@@ -203,19 +203,19 @@ or written down as a known gap in the document that would otherwise overstate th
 
 **Step 6.4 — The store for solved boards.** *(built)*
 - `:core:data` owns how a database is opened and nothing else: no table, no query, no name of its
-  own. A feature brings its own `@Database`, the tables it needs and the queries it runs against
-  them, and asks `:core:data` for the connection — so it carries its persistence with it
-  (TRADEOFFS D4).
+  own. The app has one database, and a feature adds its table, its queries and the repository over
+  them; the database itself sits above the features because Room needs all its entities declared
+  together (TRADEOFFS D4).
 - The `history/` feature keeps one row per solved board: the size, the variant, the finishing time
   and when it was finished. Only solved boards are recorded — an abandoned game is not a result.
   Its `domain` states what the feature needs — a record, and a `SolveRepository` that adds one,
   deletes one, clears everything and reports the best time for a size; its `data` implements that
   over Room, and the view models are given the interface, never the database. A second source —
   a server, a backup — is a collaborator of the repository, not a change to the screens. Nothing
-  is on screen yet. The variant is kept as its string resource id (TRADEOFFS D14).
+  is on screen yet. The variant is kept under the puzzle's own key (TRADEOFFS D14).
 - Tests: the repository against an **in-memory database**, so the queries run rather than a mock of
   them — a record survives the round trip, a delete removes its own row and no other, clearing
-  empties the table, and the best time is the smallest for that size alone; and `:core:data`
+  empties the table, and the best time is the smallest for that size and that variant; and `:core:data`
   against a database the test itself declares, so what opens a connection is exercised without
   a feature to lend it one.
 
@@ -234,9 +234,12 @@ or written down as a known gap in the document that would otherwise overstate th
   and the day it was finished. A row is deleted on its own; everything is cleared at once behind a
   confirmation, since two taps is the right price for losing every record. With nothing solved the
   screen says so and offers nothing to clear.
-- The screen follows the design's live mockup rather than `scores.svg`: grouped, not a flat list.
-  What the mockup has no room for — clearing everything, and the way in from Setup — follows
-  `DESIGN.md` instead, or the screen would be unreachable and the records permanent.
+- The screen follows the design: `screens/scores.svg` groups by board size, and so does this.
+  Three things the design does not answer are ours — deleting one row, clearing everything, and
+  the way in from Setup — because without them the screen would be unreachable and the records
+  permanent. A card lists every solve of its size, one lazy row at a time, so a board solved a
+  hundred times composes only what fits on the screen and each of those solves keeps a delete
+  button of its own.
 - Tests: the view model (grouped by size smallest first, fastest first inside, deleting takes its
   own row, clearing empties the list); **Compose UI** (the order on the screen is the order in the
   state, a row reports which record to forget, clearing asks first and cancelling clears nothing,
@@ -251,15 +254,16 @@ the deferred solver. The bar is left out rather than shown with dead buttons.)*
 ## Phase 7 — The victory celebration
 
 **Step 7.1 — The celebration, drawn in Compose.** *(built)*
-- A solved board bursts into eighteen pieces — the six `design/win.svg` places and a dozen more,
+- A solved board bursts into eighteen pieces — the six `design/screens/win.svg` places and a dozen more,
   because six read as a diagram rather than a celebration once they move — drawn between the scrim
   and the card so the layers stay in the design's order: out from the middle, growing and turning,
-  gone within two and a half seconds. They travel fastest at the start, leave in a spread rather
+  the last of them gone at 3.4 seconds. They travel fastest at the start, leave in a spread rather
   than in formation, and fade only at the end, because the card sits in the middle of the screen:
   a piece that travels evenly spends its brightest moment hidden behind it, which is what the
   first build did.
-- No animation library is a dependency: the motion is a function of one number, and an artifact
-  nothing executes is weight rather than readiness (TRADEOFFS D6).
+- No third-party animation library is a dependency: Compose's own `animation-core` produces the
+  number, the motion is a pure function of it, and an artifact nothing executes is weight rather
+  than readiness (TRADEOFFS D6).
 - Tests: the motion is a **pure function** of one number — where a piece is, how big, how turned
   and how visible at a moment between 0 and 1 — so it is unit-tested at both ends and outside
   them; **Compose UI** (the celebration is over a solved board and over no other). What it looks
