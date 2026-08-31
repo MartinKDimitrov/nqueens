@@ -36,6 +36,9 @@ private const val BOARD_SIZE = 4
 private const val WINNING_TIME = 84
 private val MIN_SQUARE = 24.dp
 
+// A headline the clock is drawn in is 30 sp tall; two lines of it would clear this comfortably.
+private val ONE_LINE = 40.dp
+
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -262,6 +265,8 @@ class GameScreenTest {
         compose.onAllNodesWithText("01:24").assertCountEquals(2)
         compose.onNodeWithText("New best", substring = true).assertDoesNotExist()
         compose.onNodeWithContentDescription("Row 1, column 1, empty").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Back to setup").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("RESET").assertIsNotEnabled()
 
         compose.onNodeWithText("Play again").performClick()
         assertTrue(again)
@@ -273,7 +278,7 @@ class GameScreenTest {
         compose.setContent {
             NQueensTheme {
                 GameContent(
-                    state = GameUiState(solved, Queens, WINNING_TIME, bestBefore = WINNING_TIME + 12),
+                    state = GameUiState(solved, Queens, WINNING_TIME, previousBestSeconds = WINNING_TIME + 12),
                     actions =
                         GameActions(
                             onTap = { },
@@ -304,6 +309,94 @@ class GameScreenTest {
         compose.onNodeWithText("View scores").performClick()
 
         assertTrue(asked)
+    }
+
+    @Test
+    fun `a board finished no faster than before claims nothing`() {
+        solvedBoard(elapsed = WINNING_TIME, previousBest = WINNING_TIME)
+
+        compose.onNodeWithText("New best", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a board finished slower than before claims nothing`() {
+        solvedBoard(elapsed = WINNING_TIME, previousBest = WINNING_TIME - 12)
+
+        compose.onNodeWithText("New best", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the card names the time this board took, not the record it beat`() {
+        solvedBoard(elapsed = WINNING_TIME, previousBest = 600)
+
+        // 01:24 is this run; 10:00 would be the record it was compared against.
+        compose.onNodeWithText("10:00").assertDoesNotExist()
+        compose.onAllNodesWithText("01:24").assertCountEquals(2)
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h568dp-420dpi")
+    fun `on a narrow phone the clock still reads on one line`() {
+        boardWith(Cell(0, 0))
+
+        val time = compose.onNodeWithText("00:00").getUnclippedBoundsInRoot()
+        val counter = compose.onNodeWithText("${BOARD_SIZE - 1}").getUnclippedBoundsInRoot()
+        assertTrue(
+            time.bottom - time.top < ONE_LINE,
+            "the clock broke across lines: it is ${time.bottom - time.top} tall",
+        )
+        assertTrue(counter.top >= time.top - ONE_LINE, "the pills share a line")
+    }
+
+    @Test
+    fun `on an ordinary phone the back button and the pills share a line`() {
+        boardWith(Cell(0, 0))
+
+        val back = compose.onNodeWithContentDescription("Back to setup").getUnclippedBoundsInRoot()
+        val clock = compose.onNodeWithText("00:00").getUnclippedBoundsInRoot()
+
+        assertTrue(
+            back.top < clock.bottom && clock.top < back.bottom,
+            "at 411 dp they belong on one line: back ${back.top}..${back.bottom}, clock ${clock.top}..${clock.bottom}",
+        )
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h780dp-420dpi")
+    fun `on the commonest phone width the bar still keeps one line`() {
+        boardWith(Cell(0, 0))
+
+        val back = compose.onNodeWithContentDescription("Back to setup").getUnclippedBoundsInRoot()
+        val clock = compose.onNodeWithText("00:00").getUnclippedBoundsInRoot()
+
+        assertTrue(
+            back.top < clock.bottom && clock.top < back.bottom,
+            "at 360 dp they belong on one line: back ${back.top}..${back.bottom}, clock ${clock.top}..${clock.bottom}",
+        )
+    }
+
+    @Test
+    @Config(qualifiers = "w891dp-h240dp-420dpi")
+    fun `on a window too short for the win card it scrolls to its last action`() {
+        solvedBoard(elapsed = WINNING_TIME, previousBest = null)
+
+        compose.onNodeWithText("Play again").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("View scores").performScrollTo().assertIsDisplayed()
+    }
+
+    private fun solvedBoard(
+        elapsed: Int,
+        previousBest: Int?,
+    ) {
+        val solved = uiState(arrayOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2)), BOARD_SIZE).board
+        compose.setContent {
+            NQueensTheme {
+                GameContent(
+                    state = GameUiState(solved, Queens, elapsed, previousBest),
+                    actions = GameActions(onTap = {}, onReset = {}, onBack = {}, onScores = {}),
+                )
+            }
+        }
     }
 
     private fun assertHittable(size: Int) {
