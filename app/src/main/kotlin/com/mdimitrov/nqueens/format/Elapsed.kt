@@ -4,7 +4,7 @@ import java.util.Locale
 
 private const val SECONDS_PER_MINUTE = 60
 
-/** Elapsed time as the board shows it: minutes and seconds, both padded. */
+/** Elapsed time as the game and the records both show it: minutes and seconds, padded. */
 internal fun formatElapsed(seconds: Int): String {
     val counted = seconds.coerceAtLeast(0)
     return String.format(
