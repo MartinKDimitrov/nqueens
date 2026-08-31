@@ -19,7 +19,7 @@ public fun conflicts(
         }
     }
 
-    /** Return all occupied lines*/
+    /** The pieces standing on a line more than one of them occupies. */
     return linesByPiece
         .filterValues { lines -> lines.any { occupancy.getValue(it) > 1 } }
         .keys

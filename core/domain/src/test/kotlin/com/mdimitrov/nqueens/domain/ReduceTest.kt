@@ -133,4 +133,11 @@ class ReduceTest {
         assertEquals(0, reduce(board, GameAction.Reset).elapsedSeconds)
         assertEquals(41, reduce(board, GameAction.Toggle(Cell(1, 1))).elapsedSeconds)
     }
+
+    @Test
+    fun `the count stops at its ceiling rather than turning negative`() {
+        val brimming = GameState(size = 4, elapsedSeconds = Int.MAX_VALUE)
+
+        assertEquals(brimming, reduce(brimming, GameAction.Tick))
+    }
 }

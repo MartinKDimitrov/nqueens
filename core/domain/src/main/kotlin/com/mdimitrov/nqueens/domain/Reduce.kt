@@ -19,7 +19,10 @@ public fun reduce(
                 state
             }
 
-        GameAction.Tick -> state.copy(elapsedSeconds = state.elapsedSeconds + 1)
+        // The count stops rather than wraps: `reduce` is total, and `GameState` refuses a
+        // negative elapsed time, so an unchecked increment would throw after Int.MAX_VALUE ticks.
+        GameAction.Tick ->
+            if (state.elapsedSeconds == Int.MAX_VALUE) state else state.copy(elapsedSeconds = state.elapsedSeconds + 1)
 
         GameAction.Reset -> state.copy(pieces = emptySet(), elapsedSeconds = 0)
     }
