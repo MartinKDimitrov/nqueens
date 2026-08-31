@@ -27,9 +27,8 @@ Language: Kotlin. UI: Jetpack Compose. DI: Hilt. Build: Gradle with a version ca
 
 ## 3. What the assignment asks for that is not built
 
-- The **elapsed timer** and the **win state**. `BoardSnapshot.isSolved` already answers whether
-  the puzzle is solved; nothing shows it yet.
-- **Placement and victory animation**, and with it Rive.
+- **Placement animation**: a queen that lands with a bounce, and a shake when she comes under
+  attack. The victory celebration is built; the per-cell motion is not.
 
 ## 4. What is deliberately out of scope
 
@@ -165,6 +164,10 @@ and the piece's own drawing, because asserting which glyph was painted means com
 pixel by pixel, which breaks whenever the icon is redrawn without protecting any behaviour.
 Hard-coding either back to the queens' would pass.
 
+The celebration is asserted as a number and as a presence, never as a picture: the tests know
+where a piece should be at a given moment and that the layer is drawn over a solved board, but
+nothing checks that anything was painted, in which colour, or that it moved at all on screen.
+
 Two belong to the records screen. No test presses `Best times` on a running app, so the route
 from Setup to the list — and the one from the win card — is wired but never walked; the seven
 tests that launch `MainActivity` stop at the board. And the day a record carries is asserted in
@@ -253,10 +256,11 @@ It belongs to the view model — a coroutine in `viewModelScope` writing into it
 | Wiring              | `MainActivity` launched for real: Start opens a board at the chosen size, takes a queen, marks an attack, resets and goes back |
 | Route guard         | a size the app cannot play sends the player back to Setup instead of reaching the board |
 | Win                 | a solved board is covered by the card, which names it and the finishing time and says by how much it beat the best before it; the squares under the card offer no tap to a finger or to TalkBack; the clock stops with the board and the solve is written down once |
+| The celebration     | the motion as a pure function of one number: in the middle and invisible at the start, out where the design puts it, grown, turned and gone at the end, and clamped outside; and that it is drawn over a solved board and over no other |
 | The records screen  | the boards are grouped by size and ordered by time on the screen itself, a row reports which record to forget, clearing everything is asked about first and cancelling clears nothing, and an empty list says so |
 | Records             | against a real database, not a mock of one: a solved board survives the round trip, a delete takes its own row and no other, clearing empties the table, and a best time belongs to its own size; and the connection itself, against a table `:core:data` declares in its own tests |
 
-118 tests: 39 in `:core:domain`, 2 in `:core:data`, 77 in `:app`. Both screens are tested as composables, run on
+126 tests: 39 in `:core:domain`, 2 in `:core:data`, 85 in `:app`. Both screens are tested as composables, run on
 the JVM under Robolectric, so `check` needs no device. What the tests do not yet cover is
 written down in §6.
 

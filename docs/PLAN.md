@@ -248,14 +248,22 @@ the deferred solver. The bar is left out rather than shown with dead buttons.)*
 
 ---
 
-## Phase 7 — Rive victory animation
+## Phase 7 — The victory celebration
 
-**Step 7.1 — Rive glue with Compose fallback.**
-- The presentation layer maps `GameEffect.Solved` → Rive state-machine input `celebrate` (artboard
-  `NQueens`, machine `game`); Compose-native celebration behind a flag if the `.riv` is
-  absent (TRADEOFFS D6).
-- Tests: **unit test of the pure `GameEffect → Rive input` mapping**; **Compose UI** test
-  that the fallback path renders. Visual polish is judged by eye.
+**Step 7.1 — The celebration, drawn in Compose.** *(built)*
+- A solved board bursts into eighteen pieces — the six `design/win.svg` places and a dozen more,
+  because six read as a diagram rather than a celebration once they move — drawn between the scrim
+  and the card so the layers stay in the design's order: out from the middle, growing and turning,
+  gone within two and a half seconds. They travel fastest at the start, leave in a spread rather
+  than in formation, and fade only at the end, because the card sits in the middle of the screen:
+  a piece that travels evenly spends its brightest moment hidden behind it, which is what the
+  first build did.
+- No animation library is a dependency: the motion is a function of one number, and an artifact
+  nothing executes is weight rather than readiness (TRADEOFFS D6).
+- Tests: the motion is a **pure function** of one number — where a piece is, how big, how turned
+  and how visible at a moment between 0 and 1 — so it is unit-tested at both ends and outside
+  them; **Compose UI** (the celebration is over a solved board and over no other). What it looks
+  like is judged by eye.
 
 ---
 

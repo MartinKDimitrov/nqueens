@@ -87,6 +87,7 @@ dependencies {
     // the test harness generate. The BOM keeps the versions in step.
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.animation)
+    implementation(libs.compose.animation.core)
     implementation(libs.compose.foundation)
     implementation(libs.compose.foundation.layout)
     implementation(libs.compose.material3)

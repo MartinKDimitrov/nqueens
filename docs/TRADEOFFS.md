@@ -129,27 +129,27 @@ not one — better stated plainly than claimed as an isolation that does not exi
 
 ---
 
-## D6 — Animations: Rive for the win, Compose for the rest *(not built)*
+## D6 — Animations: the celebration is drawn in Compose, and nothing else moves
 
 **Context.** The brief asks for placement and victory animation.
 
-**Decision.** **Rive drives the victory celebration** (one
-`.riv`, trigger `celebrate`). **Placement bounce and conflict shake are Compose** (per-cell,
-cheap, no asset). **Compose-native celebration is the fallback** if the `.riv` is not ready.
-Nothing of this is built: there is no Rive dependency and no `.riv` in the repository.
+**Decision.** **The victory celebration is drawn in Compose**, in a layer of its own between the
+scrim and the card: eighteen pieces travel out from the middle, grow, turn half a circle and fade.
+**No animation library is a dependency.** The motion is small enough to state as a function, and
+an artifact nothing executes is weight rather than readiness.
 
-**Why.** Matches the reviewers' stack where it has the most payoff (full-screen win) with a
-single asset, and keeps the domain animation-agnostic (only the presentation layer maps effect →
-Rive input). Per-cell effects are a poor fit for one shared Rive artboard, so they stay in
-Compose.
+**Why.** The full-screen win is where an animation pays off most, and the domain stays
+animation-agnostic: what moves is a pure function of one number, in the presentation layer alone.
+What is drawn can therefore be replaced without touching what decides when to draw it — the layer
+is one composable and one number wide.
 
-**Risk / ownership.** A `.riv` is a binary authored in the Rive editor — it cannot be
-generated from code. It is authored by a designer (or in the Rive editor by us), using
-`design/queen.svg` and `design/tokens.json` as the visual source, against the fixed
-contract: artboard `NQueens`, state machine `game`, trigger `celebrate`. A Rive Community
-confetti file can serve as a placeholder.
+**Cost, accepted.** Placement bounce and conflict shake are not built. They are per-cell, and
+per-cell motion earns its keep only once the board itself feels alive, which is a later concern
+than a win the player waited for.
 
-**Revisit if.** The `.riv` slips — ship the Compose celebration for v1, swap in Rive later.
+**Revisit if.** An authored animation arrives from a designer, or the celebration is asked to
+carry more than a burst — then the layer is the seam it replaces, and the function is what tells
+it when.
 
 ---
 

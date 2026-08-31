@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -308,6 +309,20 @@ class GameScreenTest {
     private fun assertHittable(size: Int) {
         compose.onNodeWithContentDescription(square(1)).assertIsDisplayed().assertHeightIsAtLeast(MIN_SQUARE)
         compose.onNodeWithContentDescription(square(size)).assertIsDisplayed().assertHeightIsAtLeast(MIN_SQUARE)
+    }
+
+    @Test
+    fun `the celebration is drawn over a solved board`() {
+        boardWith(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2))
+
+        compose.onNodeWithTag(CELEBRATION_TAG).assertExists()
+    }
+
+    @Test
+    fun `a board still being played has no celebration over it`() {
+        boardWith(Cell(0, 0))
+
+        compose.onNodeWithTag(CELEBRATION_TAG).assertDoesNotExist()
     }
 
     private fun square(n: Int) = "Row $n, column $n, empty"

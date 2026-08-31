@@ -40,7 +40,7 @@ private val BADGE_SIZE = 92.dp
 private val BADGE_GLYPH = 48.dp
 private val CARD_WIDTH = 360.dp
 
-/** The solved board stays visible under the scrim; the card names what was solved and how fast. */
+/** The solved board under the scrim, the celebration over it, the card over both. */
 @Composable
 internal fun WinCard(
     state: GameUiState,
@@ -48,17 +48,27 @@ internal fun WinCard(
     onScores: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = SCRIM_ALPHA))
-                .safeDrawingPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(Spacing.lg),
-        contentAlignment = Alignment.Center,
-    ) {
-        WinBody(state = state, onPlayAgain = onPlayAgain, onScores = onScores)
+    Box(modifier = modifier.fillMaxSize()) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = SCRIM_ALPHA)),
+        )
+
+        Celebration(modifier = Modifier.fillMaxSize())
+
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .safeDrawingPadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(Spacing.lg),
+            contentAlignment = Alignment.Center,
+        ) {
+            WinBody(state = state, onPlayAgain = onPlayAgain, onScores = onScores)
+        }
     }
 }
 
