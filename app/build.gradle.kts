@@ -75,6 +75,8 @@ kotlin {
 // the rest of the module: generated Java cannot call the mangled names Kotlin gives them.
 ksp {
     arg("room.generateKotlin", "true")
+    // The schema is checked in, so the first migration has something to be written against.
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
@@ -82,9 +84,8 @@ dependencies {
     implementation(project(":core:data"))
 
     // Every artifact the code needs is declared, so `buildHealth` can hold the build file to
-    // what is really used. Five of them — animation, coroutines, fragment, ui-geometry and the
-    // AndroidX test runner — no source file imports: they are needed by what Compose, Hilt and
-    // the test harness generate. The BOM keeps the versions in step.
+    // what is really used. Two of them — animation and fragment — no source file imports: they
+    // are needed by what Compose and Hilt generate. The BOM keeps the versions in step.
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.animation)
     implementation(libs.compose.animation.core)

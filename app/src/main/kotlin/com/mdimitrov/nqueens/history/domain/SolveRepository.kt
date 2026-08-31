@@ -19,6 +19,13 @@ internal interface SolveRepository {
 
     suspend fun clear()
 
-    /** The fastest solve of a board this size, or null while no board of that size is finished. */
-    suspend fun best(size: Int): Int?
+    /**
+     * The fastest solve of a board this size played by these rules, or null while none is
+     * finished. The variant is part of the question: rooks and queens on an eight by eight board
+     * are not the same puzzle and their times are not comparable.
+     */
+    suspend fun best(
+        size: Int,
+        variant: String,
+    ): Int?
 }

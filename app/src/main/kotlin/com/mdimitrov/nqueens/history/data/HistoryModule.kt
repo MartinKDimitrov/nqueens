@@ -1,8 +1,8 @@
 package com.mdimitrov.nqueens.history.data
 
-import com.mdimitrov.nqueens.data.Databases
 import com.mdimitrov.nqueens.history.domain.Clock
 import com.mdimitrov.nqueens.history.domain.SolveRepository
+import com.mdimitrov.nqueens.storage.PuzzleDatabase
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -10,16 +10,10 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-private const val DATABASE_FILE = "puzzle.db"
-
-/** The feature brings the tables and the queries; `:core:data` opens the file they live in. */
+/** The feature's own table, read through the app's one database. */
 @Module
 @InstallIn(SingletonComponent::class)
-internal object PuzzleDatabaseModule {
-    @Provides
-    @Singleton
-    fun database(databases: Databases): PuzzleDatabase = databases.connect(PuzzleDatabase::class.java, DATABASE_FILE)
-
+internal object SolveDaoModule {
     @Provides
     fun dao(database: PuzzleDatabase): SolveDao = database.solves()
 }

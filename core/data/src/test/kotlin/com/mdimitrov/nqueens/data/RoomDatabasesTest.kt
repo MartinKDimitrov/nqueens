@@ -14,6 +14,7 @@ import org.robolectric.RuntimeEnvironment
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 // A table of this module's own: what opens a connection is tested without borrowing a feature's.
@@ -34,6 +35,12 @@ internal interface NoteDao {
 
 @Database(entities = [NoteRow::class], version = 1, exportSchema = false)
 internal abstract class NoteDatabase : RoomDatabase() {
+    abstract fun notes(): NoteDao
+}
+
+/** The same table, a version later — what an update to the app looks like to a file on disk. */
+@Database(entities = [NoteRow::class], version = 2, exportSchema = false)
+internal abstract class NoteDatabaseNext : RoomDatabase() {
     abstract fun notes(): NoteDao
 }
 
@@ -65,5 +72,23 @@ class RoomDatabasesTest {
             assertTrue(connect("another.db").notes().all().isEmpty())
         }
 
-    private fun connect(name: String) = databases.connect(NoteDatabase::class.java, name).also { opened += it }
+    @Test
+    fun `a version this build cannot migrate is refused rather than emptied`() =
+        runTest {
+            val name = "kept.db"
+            connect(name).notes().add(NoteRow(text = "a hundred solved boards"))
+            opened.forEach { it.close() }
+            opened.clear()
+
+            val next = databases.connect(NoteDatabaseNext::class.java, name)
+            assertFailsWith<IllegalStateException> { next.openHelper.writableDatabase }
+            next.close()
+
+            val kept = connect(name).notes().all()
+            assertEquals(listOf("a hundred solved boards"), kept)
+        }
+
+    private fun connect(name: String) =
+        databases.connect(NoteDatabase::class.java, name)
+            .also { opened += it }
 }

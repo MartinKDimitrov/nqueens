@@ -9,6 +9,7 @@ import com.mdimitrov.nqueens.domain.LineKind
 import com.mdimitrov.nqueens.domain.LineRules
 import com.mdimitrov.nqueens.history.FakeSolves
 import com.mdimitrov.nqueens.history.domain.Clock
+import com.mdimitrov.nqueens.history.domain.Solve
 import com.mdimitrov.nqueens.history.domain.SolveRepository
 import com.mdimitrov.nqueens.puzzle.Queens
 import com.mdimitrov.nqueens.puzzle.Variant
@@ -161,7 +162,7 @@ class GameViewModelTest {
 
         val record = solves.added.single()
         assertEquals(4, record.size)
-        assertEquals(Queens.name, record.variant)
+        assertEquals(Queens.key, record.variant)
         assertEquals(2, record.seconds)
         assertEquals(1_700L, record.finishedAt)
     }
@@ -196,15 +197,111 @@ class GameViewModelTest {
 
     @Test
     fun `the card is told the best time from before this board was solved`() {
-        val solves = FakeSolves().apply { fastest = 90 }
+        val solves = FakeSolves()
+        solves.seed(solve(size = 4, seconds = 90), solve(size = 8, seconds = 20))
         val viewModel = gameOf(solves = solves)
 
         solveThe(viewModel)
         clock.scheduler.runCurrent()
-        assertEquals(90, viewModel.uiState.bestBefore)
+
+        // The board just finished is 4x4 and took no time at all: the 90 is the earlier 4x4,
+        // and the faster 8x8 belongs to another board.
+        assertEquals(90, viewModel.uiState.previousBestSeconds)
 
         viewModel.onAction(GameAction.Reset)
-        assertNull(viewModel.uiState.bestBefore)
+        assertNull(viewModel.uiState.previousBestSeconds)
+    }
+
+    @Test
+    fun `a board of another variant is not the best time this one is compared against`() {
+        val solves = FakeSolves()
+        solves.seed(solve(size = 4, seconds = 5, variant = "rooks"))
+        val viewModel = gameOf(solves = solves)
+
+        solveThe(viewModel)
+        clock.scheduler.runCurrent()
+
+        assertNull(viewModel.uiState.previousBestSeconds)
+    }
+
+    @Test
+    fun `a board played again while the table answers does not inherit the finished game's best`() {
+        val solves = FakeSolves()
+        solves.seed(solve(size = 4, seconds = 90))
+        val viewModel = gameOf(solves = solves)
+        solveThe(viewModel)
+
+        viewModel.onAction(GameAction.Reset)
+        clock.scheduler.runCurrent()
+
+        assertNull(viewModel.uiState.previousBestSeconds)
+        assertEquals(2, solves.added.size, "the earlier record plus this solve: the write survives")
+    }
+
+    @Test
+    fun `a board nobody has solved is not written down`() {
+        val solves = FakeSolves()
+        val viewModel = gameOf(solves = solves)
+
+        // A full board of queens attacking each other: nothing left to place, nothing solved.
+        listOf(Cell(0, 0), Cell(1, 1), Cell(2, 2), Cell(3, 3))
+            .forEach { viewModel.onAction(GameAction.Toggle(it)) }
+        clock.scheduler.advanceTimeBy(2.5.seconds)
+        clock.scheduler.runCurrent()
+
+        assertEquals(0, viewModel.uiState.board.piecesLeft)
+        assertFalse(viewModel.uiState.board.isSolved)
+        assertTrue(solves.added.isEmpty())
+    }
+
+    @Test
+    fun `a table that throws never reaches the handler that ends the process`() {
+        val escaped = mutableListOf<Throwable>()
+        val before = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { _, failure -> escaped += failure }
+
+        try {
+            val viewModel = gameOf(solves = RefusingWrites())
+            solveThe(viewModel)
+            clock.scheduler.runCurrent()
+        } finally {
+            Thread.setDefaultUncaughtExceptionHandler(before)
+        }
+
+        assertTrue(escaped.isEmpty(), "a refused write reached the uncaught handler: $escaped")
+    }
+
+    @Test
+    fun `a refused read costs the comparison, never the record`() {
+        val table = RefusingReads()
+        val viewModel = gameOf(solves = table)
+
+        solveThe(viewModel)
+        clock.scheduler.runCurrent()
+
+        assertEquals(1, table.added.size, "the solve is written down even though the read failed")
+        assertNull(viewModel.uiState.previousBestSeconds, "and the card claims no record")
+    }
+
+    @Test
+    fun `a refused write costs the record, not the game, and the next game may still be written`() {
+        val table = RefusingWrites()
+        table.seed(solve(size = 4, seconds = 90))
+        val viewModel = gameOf(solves = table)
+
+        solveThe(viewModel)
+        clock.scheduler.runCurrent()
+
+        assertTrue(viewModel.uiState.board.isSolved, "the game survives a storage failure")
+        assertEquals(1, table.added.size, "and this board was not written down")
+        assertNull(viewModel.uiState.previousBestSeconds, "so the card claims no record")
+
+        table.refusing = false
+        viewModel.onAction(GameAction.Reset)
+        solveThe(viewModel)
+        clock.scheduler.runCurrent()
+
+        assertEquals(2, table.added.size, "and the next game is written")
     }
 
     private fun gameOf(
@@ -219,7 +316,41 @@ class GameViewModelTest {
         savedStateHandle = SavedStateHandle(mapOf(SIZE_ARGUMENT to size)),
     )
 
+    private fun solve(
+        size: Int,
+        seconds: Int,
+        variant: String = Queens.key,
+    ) = Solve(size = size, variant = variant, seconds = seconds, finishedAt = 0L)
+
     private fun solveThe(viewModel: GameViewModel) =
         listOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2))
             .forEach { viewModel.onAction(GameAction.Toggle(it)) }
+}
+
+/** A table that refuses to be read, the way a locked one does, but takes what it is given. */
+private class RefusingReads(
+    private val rows: FakeSolves = FakeSolves(),
+) : SolveRepository by rows {
+    val added: List<Solve> get() = rows.added
+
+    override suspend fun best(
+        size: Int,
+        variant: String,
+    ): Int? = error("the table is locked")
+}
+
+/** A table that answers what it is asked and refuses to be written to, the way a full disk does. */
+private class RefusingWrites(
+    private val rows: FakeSolves = FakeSolves(),
+) : SolveRepository by rows {
+    var refusing = true
+
+    val added: List<Solve> get() = rows.added
+
+    fun seed(vararg solves: Solve) = rows.seed(*solves)
+
+    override suspend fun add(solve: Solve) {
+        if (refusing) error("the disk is full")
+        rows.add(solve)
+    }
 }

@@ -20,6 +20,9 @@ internal interface SolveDao {
     @Query("DELETE FROM solves")
     suspend fun clear()
 
-    @Query("SELECT MIN(seconds) FROM solves WHERE size = :size")
-    suspend fun best(size: Int): Int?
+    @Query("SELECT MIN(seconds) FROM solves WHERE size = :size AND variant = :variant")
+    suspend fun best(
+        size: Int,
+        variant: String,
+    ): Int?
 }

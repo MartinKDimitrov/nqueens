@@ -18,6 +18,13 @@ import com.mdimitrov.nqueens.domain.NQueensLines
 internal val LARGEST_PLAYABLE_BOARD: Int = minOf(12, MAX_BOARD_SIZE)
 
 internal data class Variant(
+    /**
+     * How a record names this puzzle. It is the feature's own word and never a resource id:
+     * ids are assigned when the resource table is built and move whenever a string is added or
+     * removed, so a row written by one build would name a different puzzle in the next
+     * (TRADEOFFS D14).
+     */
+    val key: String,
     @StringRes val name: Int,
     @DrawableRes val piece: Int,
     val rules: LineRules,
@@ -36,6 +43,7 @@ internal data class VariantText(
 
 internal val Queens: Variant =
     Variant(
+        key = "queens",
         name = R.string.variant_queens,
         piece = R.drawable.ic_queen,
         rules = NQueensLines,

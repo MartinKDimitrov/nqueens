@@ -7,6 +7,6 @@ internal data class GameUiState(
     val board: BoardSnapshot,
     val variant: Variant,
     val elapsedSeconds: Int,
-    // The fastest solve of this size before this board was finished, if there was one.
-    val bestBefore: Int? = null,
+    // The fastest solve of this size and variant before this board was finished, if there was one.
+    val previousBestSeconds: Int? = null,
 )

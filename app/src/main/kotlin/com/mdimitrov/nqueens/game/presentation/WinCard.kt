@@ -108,7 +108,7 @@ private fun WinBody(
         )
 
         FinishingTime(seconds = state.elapsedSeconds)
-        NewBest(seconds = state.elapsedSeconds, bestBefore = state.bestBefore)
+        NewBest(seconds = state.elapsedSeconds, previousBest = state.previousBestSeconds)
 
         Button(
             onClick = onPlayAgain,
@@ -182,9 +182,10 @@ private fun FinishingTime(seconds: Int) {
 @Composable
 private fun NewBest(
     seconds: Int,
-    bestBefore: Int?,
+    previousBest: Int?,
 ) {
-    val betterBy = bestBefore?.minus(seconds)?.takeIf { it > 0 } ?: return
+    // Only a board finished faster than the one before it says so: a tie is not a new best.
+    val betterBy = previousBest?.minus(seconds)?.takeIf { it > 0 } ?: return
 
     Text(
         text = stringResource(R.string.game_new_best, betterBy),

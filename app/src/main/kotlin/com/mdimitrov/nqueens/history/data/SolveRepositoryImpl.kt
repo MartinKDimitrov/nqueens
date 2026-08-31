@@ -20,7 +20,10 @@ internal class SolveRepositoryImpl
 
         override suspend fun clear() = dao.clear()
 
-        override suspend fun best(size: Int): Int? = dao.best(size)
+        override suspend fun best(
+            size: Int,
+            variant: String,
+        ): Int? = dao.best(size, variant)
     }
 
 private fun SolveRow.asSolve() =
