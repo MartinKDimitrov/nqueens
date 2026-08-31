@@ -1,9 +1,7 @@
 package com.mdimitrov.nqueens.history.presentation
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,7 +13,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -39,6 +37,8 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mdimitrov.nqueens.R
@@ -87,17 +87,29 @@ internal fun ScoresContent(
                 .safeDrawingPadding()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.xl),
     ) {
+        // The title and the way off the screen both stay put; only the records scroll. Either of
+        // them inside the list would be composed away by a long enough table, and "Clear all" is
+        // then out of reach of a finger and of a screen reader alike.
         Header(canClear = state.groups.isNotEmpty(), onClearAll = { asking = true })
 
-        if (state.groups.isEmpty()) {
-            Nothing(modifier = Modifier.weight(1f))
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f).padding(top = Spacing.lg),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
-            ) {
-                items(state.groups, key = { it.size }) { group ->
-                    GroupCard(group = group, onDelete = onDelete)
+        LazyColumn(modifier = Modifier.weight(1f).padding(top = Spacing.lg)) {
+            if (state.groups.isEmpty()) {
+                item(key = "empty") { Nothing(state = state) }
+            }
+
+            // A card is drawn a row at a time rather than as one item, so a board solved a
+            // hundred times composes what fits on the screen — and every one of those solves
+            // keeps a delete button of its own.
+            state.groups.forEach { group ->
+                item(key = "group ${group.size}") { GroupHeader(group = group) }
+
+                itemsIndexed(group.solves, key = { _, solve -> solve.id }) { index, solve ->
+                    ScoreRow(
+                        rank = index + 1,
+                        solve = solve,
+                        last = index == group.solves.lastIndex,
+                        onDelete = onDelete,
+                    )
                 }
             }
         }
@@ -106,7 +118,7 @@ internal fun ScoresContent(
             onClick = onNewGame,
             modifier =
                 Modifier
-                    .padding(top = Spacing.lg)
+                    .padding(top = Spacing.md)
                     .fillMaxWidth()
                     .heightIn(min = NewGameHeight),
             shape = RoundedCornerShape(Radii.md),
@@ -161,11 +173,21 @@ private fun Header(
     }
 }
 
+/**
+ * What stands in for the list. Nothing at all until the table has answered: a screen that says
+ * "nothing solved yet" while the records are still on their way tells the player something untrue
+ * about their own history.
+ */
 @Composable
-private fun Nothing(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+private fun Nothing(state: ScoresUiState) {
+    if (!state.answered) return
+
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xl),
+        contentAlignment = Alignment.Center,
+    ) {
         Text(
-            text = stringResource(R.string.scores_empty),
+            text = stringResource(if (state.readable) R.string.scores_empty else R.string.scores_unreadable),
             style = MaterialTheme.typography.bodyLarge,
             color = NQueensTheme.board.onSurfaceMuted,
         )
@@ -173,41 +195,30 @@ private fun Nothing(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun GroupCard(
-    group: ScoreGroup,
-    onDelete: (Long) -> Unit,
-) {
+private fun GroupHeader(group: ScoreGroup) {
     val colors = NQueensTheme.board
 
-    Column(
+    Row(
         modifier =
             Modifier
+                .padding(top = Spacing.md)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(Radii.md))
+                .clip(RoundedCornerShape(topStart = Radii.md, topEnd = Radii.md))
                 .background(MaterialTheme.colorScheme.surface)
-                .border(HairlineBorder, colors.border, RoundedCornerShape(Radii.md)),
+                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.setup_board_size_value, group.size),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = pluralStringResource(R.plurals.scores_solves, group.runs.size, group.runs.size),
-                style = MaterialTheme.typography.labelSmall,
-                color = colors.onSurfaceMuted,
-            )
-        }
-
-        group.runs.forEachIndexed { index, solve ->
-            HorizontalDivider(thickness = HairlineBorder, color = colors.border)
-            ScoreRow(rank = index + 1, solve = solve, onDelete = onDelete)
-        }
+        Text(
+            text = stringResource(R.string.setup_board_size_value, group.size),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = pluralStringResource(R.plurals.scores_solves, group.solves.size, group.solves.size),
+            style = MaterialTheme.typography.labelSmall,
+            color = colors.onSurfaceMuted,
+        )
     }
 }
 
@@ -215,44 +226,69 @@ private fun GroupCard(
 private fun ScoreRow(
     rank: Int,
     solve: Solve,
+    last: Boolean,
     onDelete: (Long) -> Unit,
 ) {
     val colors = NQueensTheme.board
     val time = formatElapsed(solve.seconds)
-    val erase = stringResource(R.string.scores_delete, time, solve.size)
+    val context = LocalContext.current
+    val day = formatSolveDate(context, solve.finishedAt)
+    // The moment it was finished is what tells two equally fast solves of one board apart, and
+    // unlike the rank it does not change when a neighbour is deleted — which matters for a label
+    // a screen reader may be holding when the list under it moves.
+    val erase = stringResource(R.string.scores_delete, time, solve.size, formatSolveMoment(context, solve.finishedAt))
 
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
+    val floor = if (last) Radii.md else 0.dp
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(bottomStart = floor, bottomEnd = floor))
+                .background(MaterialTheme.colorScheme.surface),
     ) {
-        RankBadge(rank = rank)
-        Text(
-            text = time,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(start = Spacing.md).weight(1f),
-        )
-        Text(
-            text = formatSolveDate(LocalContext.current, solve.finishedAt),
-            style = MaterialTheme.typography.labelSmall,
-            color = colors.onSurfaceMuted,
-        )
-        Box(
-            modifier =
-                Modifier
-                    .padding(start = Spacing.sm)
-                    .size(DeleteSide)
-                    .clip(CircleShape)
-                    .clickable { onDelete(solve.id) }
-                    .semantics { contentDescription = erase },
-            contentAlignment = Alignment.Center,
+        HorizontalDivider(thickness = HairlineBorder, color = colors.border)
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_trash),
-                contentDescription = null,
-                tint = colors.conflict,
-                modifier = Modifier.size(DeleteGlyph),
+            RankBadge(rank = rank)
+            Text(
+                text = time,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(start = Spacing.md),
             )
+            // The date is what gives way when the row runs out of room: at the largest font on a
+            // narrow phone it would otherwise take the width the solve time needs, and the time is
+            // what the screen is for.
+            Text(
+                text = day,
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.onSurfaceMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.End,
+                modifier = Modifier.padding(start = Spacing.sm).weight(1f),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .padding(start = Spacing.sm)
+                        .size(DeleteSide)
+                        .clip(CircleShape)
+                        .clickable { onDelete(solve.id) }
+                        .semantics { contentDescription = erase },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_trash),
+                    contentDescription = null,
+                    tint = colors.conflict,
+                    modifier = Modifier.size(DeleteGlyph),
+                )
+            }
         }
     }
 }
