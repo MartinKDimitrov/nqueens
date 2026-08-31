@@ -36,6 +36,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,7 +51,7 @@ import com.mdimitrov.nqueens.theme.Radii
 import com.mdimitrov.nqueens.theme.Spacing
 
 private val RankSide = 24.dp
-private val DeleteSide = 44.dp
+private val DeleteSide = 48.dp
 private val DeleteGlyph = 18.dp
 private val NewGameHeight = 60.dp
 
@@ -152,6 +153,7 @@ private fun Header(
                 text = stringResource(R.string.scores_title),
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.semantics { heading() },
             )
             Text(
                 text = stringResource(R.string.scores_subtitle),
@@ -253,25 +255,7 @@ private fun ScoreRow(
             modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            RankBadge(rank = rank)
-            Text(
-                text = time,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(start = Spacing.md),
-            )
-            // The date is what gives way when the row runs out of room: at the largest font on a
-            // narrow phone it would otherwise take the width the solve time needs, and the time is
-            // what the screen is for.
-            Text(
-                text = day,
-                style = MaterialTheme.typography.labelSmall,
-                color = colors.onSurfaceMuted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.End,
-                modifier = Modifier.padding(start = Spacing.sm).weight(1f),
-            )
+            SolveLine(rank = rank, time = time, day = day, modifier = Modifier.weight(1f))
             Box(
                 modifier =
                     Modifier
@@ -290,6 +274,42 @@ private fun ScoreRow(
                 )
             }
         }
+    }
+}
+
+/** The rank, the time and the day, spoken as one sentence rather than as three separate items. */
+@Composable
+private fun SolveLine(
+    rank: Int,
+    time: String,
+    day: String,
+    modifier: Modifier = Modifier,
+) {
+    val spoken = stringResource(R.string.scores_row, stringResource(R.string.scores_rank, rank), time, day)
+
+    Row(
+        modifier = modifier.semantics(mergeDescendants = true) { contentDescription = spoken },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RankBadge(rank = rank)
+        Text(
+            text = time,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(start = Spacing.md),
+        )
+        // The date is what gives way when the row runs out of room: at the largest font on a
+        // narrow phone it would otherwise take the width the solve time needs, and the time is
+        // what the screen is for.
+        Text(
+            text = day,
+            style = MaterialTheme.typography.labelSmall,
+            color = NQueensTheme.board.onSurfaceMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.End,
+            modifier = Modifier.padding(start = Spacing.sm).weight(1f),
+        )
     }
 }
 

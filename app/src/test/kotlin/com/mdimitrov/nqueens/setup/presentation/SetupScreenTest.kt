@@ -1,14 +1,17 @@
 package com.mdimitrov.nqueens.setup.presentation
 
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.dp
 import com.mdimitrov.nqueens.R
 import com.mdimitrov.nqueens.domain.MIN_BOARD_SIZE
 import com.mdimitrov.nqueens.puzzle.LARGEST_PLAYABLE_BOARD
@@ -24,6 +27,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+
+private val TOUCH_TARGET = 48.dp
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -137,6 +142,18 @@ class SetupScreenTest {
         setupAt(size = LARGEST_PLAYABLE_BOARD)
 
         compose.onNodeWithText("12 × 12").assertExists()
+    }
+
+    @Test
+    fun `the stepper's buttons are the size a finger needs, whatever they are drawn at`() {
+        setupAt(size = DEFAULT_BOARD_SIZE)
+
+        for (button in listOf("Smaller board", "Larger board")) {
+            compose
+                .onNodeWithContentDescription(button)
+                .assertWidthIsEqualTo(TOUCH_TARGET)
+                .assertHeightIsEqualTo(TOUCH_TARGET)
+        }
     }
 
     private fun setupAt(

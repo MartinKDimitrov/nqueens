@@ -49,7 +49,9 @@ rather than a dropdown, and where the mockup prints the best time the app puts a
 **Best times** button that opens the records instead. The preview draws
 an empty board at the chosen size; the mockup draws a solved eight-queen one. Start follows the
 controls rather than being anchored to the bottom, and the column scrolls, so on a screen too
-short for the whole of it — a phone held sideways — the button is still reachable.
+short for the whole of it — a phone held sideways — the button is still reachable. The stepper's
+two buttons are painted at the size the mockup draws them, inside a target of the 48 dp a finger
+is owed.
 
 ### Game (`game.svg`)
 Top bar on `surface`: queens-left counter, elapsed timer, reset action — three
@@ -95,8 +97,9 @@ rank badge / monospaced time / date. Rank 1 uses the `primary` badge. A
 *Implemented differently:* the times are drawn in the app's own type scale — no font family from
 the tokens reaches the code, so nothing is monospaced. Each row carries a delete button and the
 header a **Clear all**, neither of which the mockup draws, because a record nobody can remove is
-permanent; the label of that button names the moment the board was finished, since two equally
-fast solves of one board are otherwise indistinguishable to a screen reader. A card lists every
+permanent; its glyph is small and the button around it is the 48 dp a finger is owed, and its
+label names the moment the board was finished, since two equally fast solves of one board are
+otherwise indistinguishable to a screen reader. A card lists every
 solve of its size a row at a time, and **New game** stays on screen while the list scrolls under
 it.
 

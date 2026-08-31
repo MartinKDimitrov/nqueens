@@ -17,6 +17,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -90,6 +92,7 @@ private fun Square(
 ) {
     val colors = NQueensTheme.board
     val tint = queenTint(status, colors)
+    val haptics = LocalHapticFeedback.current
 
     val description =
         when (status) {
@@ -102,7 +105,11 @@ private fun Square(
         modifier =
             modifier
                 .background(squareBackground(status, isLightCell(cell.row, cell.col), colors))
-                .clickable(enabled = onTap != null) { onTap?.invoke(cell) }
+                .clickable(enabled = onTap != null) {
+                    // A queen answers the finger the way a piece answers the hand.
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onTap?.invoke(cell)
+                }
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {

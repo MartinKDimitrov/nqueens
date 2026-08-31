@@ -3,7 +3,11 @@ package com.mdimitrov.nqueens.history.presentation
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
@@ -34,6 +38,7 @@ import kotlin.test.assertTrue
 private const val DAY = 86_400_000L
 private const val HOUR = 3_600_000L
 private val SAME_ROW = 8.dp
+private val TOUCH_TARGET = 48.dp
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -68,8 +73,8 @@ class ScoresScreenTest {
         val large = compose.onNodeWithText("8 × 8").getUnclippedBoundsInRoot()
         assertTrue(small.top < large.top, "the smallest board is listed first")
 
-        val fastest = compose.onNodeWithText("01:12").getUnclippedBoundsInRoot()
-        val slower = compose.onNodeWithText("01:24").getUnclippedBoundsInRoot()
+        val fastest = compose.onNodeWithText("01:12", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val slower = compose.onNodeWithText("01:24", useUnmergedTree = true).getUnclippedBoundsInRoot()
         assertTrue(fastest.top < slower.top, "the fastest solve is listed first in its card")
     }
 
@@ -216,8 +221,8 @@ class ScoresScreenTest {
         one: String,
         other: String,
     ): Boolean {
-        val a = compose.onNodeWithText(one).getUnclippedBoundsInRoot()
-        val b = compose.onNodeWithText(other).getUnclippedBoundsInRoot()
+        val a = compose.onNodeWithText(one, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val b = compose.onNodeWithText(other, useUnmergedTree = true).getUnclippedBoundsInRoot()
         val apart = ((a.top + a.bottom) / 2 - (b.top + b.bottom) / 2).value
 
         return abs(apart) < SAME_ROW.value
@@ -289,6 +294,32 @@ class ScoresScreenTest {
                 .map { it.config[SemanticsProperties.ContentDescription].first() }
 
         assertEquals(2, labels.toSet().size, "both buttons read the same: $labels")
+    }
+
+    @Test
+    fun `a row is spoken as one item, and its delete button is the size a finger needs`() {
+        scoresOf(solve(size = 8, seconds = 84, finishedAt = 0L, id = 1))
+
+        compose.onNodeWithContentDescription("Rank 1, 01:24, Jan 1", substring = true).assertExists()
+        compose
+            .onNodeWithContentDescription("Delete", substring = true)
+            .assertWidthIsEqualTo(TOUCH_TARGET)
+            .assertHeightIsEqualTo(TOUCH_TARGET)
+
+        val row =
+            compose
+                .onNodeWithContentDescription("Rank 1, 01:24, Jan 1", substring = true)
+                .fetchSemanticsNode()
+        val time = compose.onNodeWithText("01:24").fetchSemanticsNode()
+
+        assertEquals(row.id, time.id, "the time is read as an item of its own, not as part of the row")
+    }
+
+    @Test
+    fun `the title is a heading, so a screen reader can jump past it to the list`() {
+        scoresOf(solve(size = 8, seconds = 84, id = 1))
+
+        compose.onNodeWithText("Best times").assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
     }
 
     private fun showing(state: ScoresUiState) {

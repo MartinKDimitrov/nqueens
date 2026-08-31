@@ -26,6 +26,7 @@
     <string name="game_play_again">Play again</string>
     <string name="game_new_best">New best — %1$ds faster than before</string>
     <string name="game_view_scores">View scores</string>
+    <string name="game_solved_announcement">Solved! %1$s, in %2$s</string>
     <!-- Scores screen -->
     <string name="scores_title">Best times</string>
     <string name="scores_subtitle">Your fastest solves by board size</string>
@@ -43,6 +44,7 @@
         <item quantity="one">%1$d solve</item>
         <item quantity="other">%1$d solves</item>
     </plurals>
+    <string name="scores_row">Rank %1$s, %2$s, %3$s</string>
     <!-- Queens variant -->
     <string name="variant_queens">Queens</string>
     <string name="variant_queens_counter">QUEENS LEFT</string>

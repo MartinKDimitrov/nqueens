@@ -33,6 +33,11 @@ Language: Kotlin. UI: Jetpack Compose. DI: Hilt. Build: Gradle with a version ca
   answering it says that instead.
 - **The celebration.** Eighteen pieces burst out of the middle over a solved board, between the
   scrim and the card, and are gone within three and a half seconds.
+- **Reaching it without sight or a steady hand.** Every control is at least 48 dp to a finger
+  whatever it is drawn at. A record is spoken as one sentence rather than as a rank, a time and a
+  day arriving a swipe apart, and the delete button beside it keeps its own voice. Both screen
+  titles are headings, and the win card announces the whole result the moment it arrives, without
+  being touched. Placing a piece and solving the board are felt; there is no sound.
 
 ## 3. What the assignment asks for that is not built
 
@@ -198,7 +203,12 @@ that a solved board's row reaches the real table is not asserted anywhere. And t
 stamps a record is the system's only in production; every test hands the view model one of its
 own.
 
-Four things are known and left as they are. **Nothing prunes the table**: every solve is listed
+Five things are known and left as they are. **Two colour pairings stay below AA**: the win
+card's "New best" line is `success` on `surface` at 3.45:1 and the records screen's **Clear all**
+is `conflict` on `background` at 4.20:1, against the 4.5:1 the guideline asks of text. The tokens
+carry no darker green or red, and both places say in words what the colour says, so nothing is
+carried by colour alone — but the two are under the bar and stay there.
+**Nothing prunes the table**: every solve is listed
 and every one can be deleted, one lazy row at a time, so what is composed is bounded and what is
 kept is not — a board solved a thousand times is a thousand rows to scroll. **A failed write, a
 failed delete and a failed clear are invisible**: they cost the record silently, because the app
@@ -211,8 +221,8 @@ duration on the screen is minutes and seconds.
 Three smaller ones, in the tests themselves rather than the code. The counter's label is substituted
 in the variant test with the back button's string, so the test cannot tell the label being read
 from the variant apart from that one string being hard-coded in its place. The large-type stepper test presses the button by its
-semantics node, which lands whatever the button's size, so it catches a control collapsed to
-nothing and not one merely too small to hit. And `BoardSnapshot.piecesUnderAttack` is asserted
+semantics node, which lands whatever the button's size; what it is too small to hit is caught
+separately, by measuring the button rather than pressing it. And `BoardSnapshot.piecesUnderAttack` is asserted
 through the sentence the strip prints rather than in the domain that computes it.
 
 Type size is the one the screens are measured against. Robolectric only measures text at all in

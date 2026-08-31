@@ -59,7 +59,7 @@ class ScoresPaintTest {
         val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
         view.draw(Canvas(bitmap))
 
-        val digit = compose.onNodeWithText(rank).fetchSemanticsNode().boundsInWindow
+        val digit = compose.onNodeWithText(rank, useUnmergedTree = true).fetchSemanticsNode().boundsInWindow
         return Color(bitmap.getPixel((digit.left - INSIDE_THE_BADGE).toInt(), digit.center.y.toInt()))
     }
 }

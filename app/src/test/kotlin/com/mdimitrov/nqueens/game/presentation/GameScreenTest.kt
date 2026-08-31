@@ -1,5 +1,13 @@
 package com.mdimitrov.nqueens.game.presentation
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
@@ -45,6 +53,14 @@ private val ONE_LINE = 40.dp
 class GameScreenTest {
     @get:Rule
     val compose = createComposeRule()
+    private val felt = mutableListOf<HapticFeedbackType>()
+
+    private val haptics =
+        object : HapticFeedback {
+            override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {
+                felt += hapticFeedbackType
+            }
+        }
 
     @Test
     fun `every square says where it is and whether a queen stands there`() {
@@ -384,21 +400,6 @@ class GameScreenTest {
         compose.onNodeWithText("View scores").performScrollTo().assertIsDisplayed()
     }
 
-    private fun solvedBoard(
-        elapsed: Int,
-        previousBest: Int?,
-    ) {
-        val solved = uiState(arrayOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2)), BOARD_SIZE).board
-        compose.setContent {
-            NQueensTheme {
-                GameContent(
-                    state = GameUiState(solved, Queens, elapsed, previousBest),
-                    actions = GameActions(onTap = {}, onReset = {}, onBack = {}, onScores = {}),
-                )
-            }
-        }
-    }
-
     private fun assertHittable(size: Int) {
         compose.onNodeWithContentDescription(square(1)).assertIsDisplayed().assertHeightIsAtLeast(MIN_SQUARE)
         compose.onNodeWithContentDescription(square(size)).assertIsDisplayed().assertHeightIsAtLeast(MIN_SQUARE)
@@ -418,6 +419,33 @@ class GameScreenTest {
         compose.onNodeWithTag(CELEBRATION_TAG).assertDoesNotExist()
     }
 
+    @Test
+    fun `placing a queen is felt as well as seen`() {
+        boardWith()
+
+        compose.onNodeWithContentDescription(square(1)).performClick()
+
+        assertEquals(listOf(HapticFeedbackType.TextHandleMove), felt)
+    }
+
+    @Test
+    fun `a solved board is felt once, and harder`() {
+        solvedBoard(elapsed = WINNING_TIME, previousBest = null)
+        compose.waitForIdle()
+
+        assertEquals(listOf(HapticFeedbackType.LongPress), felt)
+    }
+
+    @Test
+    fun `the win card says the whole result on its own, without being touched`() {
+        solvedBoard(elapsed = WINNING_TIME, previousBest = null)
+
+        compose
+            .onNodeWithContentDescription("Solved! 4 × 4 · Queens, in 01:24")
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+    }
+
     private fun square(n: Int) = "Row $n, column $n, empty"
 
     private fun uiState(
@@ -429,6 +457,23 @@ class GameScreenTest {
         elapsedSeconds = 0,
     )
 
+    private fun solvedBoard(
+        elapsed: Int,
+        previousBest: Int?,
+    ) {
+        val solved = uiState(arrayOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2)), BOARD_SIZE).board
+        compose.setContent {
+            CompositionLocalProvider(LocalHapticFeedback provides haptics) {
+                NQueensTheme {
+                    GameContent(
+                        state = GameUiState(solved, Queens, elapsed, previousBest),
+                        actions = GameActions(onTap = {}, onReset = {}, onBack = {}, onScores = {}),
+                    )
+                }
+            }
+        }
+    }
+
     private fun boardWith(
         vararg queens: Cell,
         size: Int = BOARD_SIZE,
@@ -437,17 +482,19 @@ class GameScreenTest {
         onBack: () -> Unit = {},
     ) {
         compose.setContent {
-            NQueensTheme {
-                GameContent(
-                    state = uiState(queens, size),
-                    actions =
-                        GameActions(
-                            onTap = onTap,
-                            onReset = onReset,
-                            onBack = onBack,
-                            onScores = {},
-                        ),
-                )
+            CompositionLocalProvider(LocalHapticFeedback provides haptics) {
+                NQueensTheme {
+                    GameContent(
+                        state = uiState(queens, size),
+                        actions =
+                            GameActions(
+                                onTap = onTap,
+                                onReset = onReset,
+                                onBack = onBack,
+                                onScores = {},
+                            ),
+                    )
+                }
             }
         }
     }

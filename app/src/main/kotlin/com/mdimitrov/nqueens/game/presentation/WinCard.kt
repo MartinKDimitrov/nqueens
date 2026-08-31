@@ -20,12 +20,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.mdimitrov.nqueens.R
 import com.mdimitrov.nqueens.format.formatElapsed
@@ -48,6 +56,13 @@ internal fun WinCard(
     onScores: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // The card arrives on its own, so it is also felt on its own.
+    val haptics = LocalHapticFeedback.current
+
+    LaunchedEffect(Unit) {
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         Box(
             modifier =
@@ -80,6 +95,12 @@ private fun WinBody(
 ) {
     val variantName = stringResource(state.variant.name)
     val summary = stringResource(R.string.game_board_summary, state.board.size, variantName)
+    val announcement =
+        stringResource(
+            R.string.game_solved_announcement,
+            summary,
+            formatElapsed(state.elapsedSeconds),
+        )
 
     Column(
         modifier =
@@ -98,7 +119,14 @@ private fun WinBody(
             text = stringResource(R.string.game_solved),
             style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(top = Spacing.lg),
+            // Nobody touched anything to bring this card here, so it announces itself — and says
+            // the whole result rather than only the word that is drawn.
+            modifier =
+                Modifier.padding(top = Spacing.lg).semantics {
+                    heading()
+                    liveRegion = LiveRegionMode.Polite
+                    contentDescription = announcement
+                },
         )
         Text(
             text = summary,

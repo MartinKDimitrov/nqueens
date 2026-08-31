@@ -49,6 +49,10 @@ import com.mdimitrov.nqueens.theme.Spacing
 
 private val StepperHeight = 68.dp
 private val StepperButtonSide = 40.dp
+
+// What a finger gets, which is not what is painted: the button is drawn at its own size inside a
+// target of the 48 dp the accessibility guidelines ask for.
+private val TouchTarget = 48.dp
 private val VariantRowHeight = 56.dp
 private val StartButtonHeight = 60.dp
 private val PieceIconSide = 22.dp
@@ -241,18 +245,26 @@ private fun StepperButton(
     Box(
         modifier =
             Modifier
-                .size(StepperButtonSide)
+                .size(TouchTarget)
                 .clip(RoundedCornerShape(Radii.sm))
-                .background(dimmedUnless(colors.background, enabled))
                 .clickable(enabled = enabled, onClick = onClick)
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = symbol,
-            style = MaterialTheme.typography.headlineSmall,
-            color = dimmedUnless(colors.glyph, enabled),
-        )
+        Box(
+            modifier =
+                Modifier
+                    .size(StepperButtonSide)
+                    .clip(RoundedCornerShape(Radii.sm))
+                    .background(dimmedUnless(colors.background, enabled)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = symbol,
+                style = MaterialTheme.typography.headlineSmall,
+                color = dimmedUnless(colors.glyph, enabled),
+            )
+        }
     }
 }
 
