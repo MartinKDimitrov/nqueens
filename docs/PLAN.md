@@ -293,4 +293,16 @@ the deferred solver. The bar is left out rather than shown with dead buttons.)*
 - The game screen owns the speaker and everything under it asks for a sound by name, so a test
   hands the board a listener instead.
 
+**Step 8.3 — Placement animation.** *(built)*
+- A queen lands rather than appears: she arrives at 70% of her size, overshoots to 114% and
+  settles, in a little over a quarter of a second.
+- She flinches when a line opens on her — three passes left and right, each smaller than the
+  last, over three tenths of a second. The flinch belongs to the move that puts her under attack,
+  not to the state, so she does not shake for as long as the attack lasts, and a queen drawn
+  already under attack is still.
+- Both are pure functions of one number between 0 and 1, as the celebration's motion is, so both
+  are unit-tested at their ends, past them, and at the shape between: that the landing overshoots
+  and settles, and that each pass of the flinch is smaller than the one before.
+- The motion is drawn in a graphics layer, so nothing is measured again as it plays.
+
 ---

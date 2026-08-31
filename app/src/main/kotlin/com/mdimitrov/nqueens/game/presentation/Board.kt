@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -94,6 +95,8 @@ private fun Square(
     val tint = queenTint(status, colors)
     val haptics = LocalHapticFeedback.current
     val sounds = LocalSounds.current
+    val landing = landingOf(standing = tint != null)
+    val flinch = flinchOf(attacked = status == CellStatus.PIECE_CONFLICT)
 
     val description =
         when (status) {
@@ -120,7 +123,14 @@ private fun Square(
                 painter = painterResource(variant.piece),
                 contentDescription = null,
                 tint = tint,
-                modifier = Modifier.fillMaxSize(QUEEN_SCALE),
+                modifier =
+                    Modifier
+                        .fillMaxSize(QUEEN_SCALE)
+                        .graphicsLayer {
+                            scaleX = landing
+                            scaleY = landing
+                            translationX = flinch * ShakeWidth.toPx()
+                        },
             )
         }
     }

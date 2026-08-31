@@ -11,11 +11,9 @@ many are still to place, a clock runs beside it, and reset clears the board. Sol
 board is covered by a card that names the size, the variant and the finishing time, says by how
 much it beat your best, and offers another game or the records. Solved boards are kept in a
 database and listed under "Best times", where a row is deleted on its own and everything can be
-cleared at once. Every move is felt and heard — a piece set down, a piece lifted, a piece falling
-under attack, a board solved — and the game is quiet while the phone is.
-
-Not built yet: the placement animation — a queen that lands with a bounce, a shake when she comes
-under attack.
+cleared at once. A queen lands with a bounce and flinches when a line opens on her, and every
+move is felt and heard — a piece set down, a piece lifted, a piece falling under attack, a board
+solved — with the game quiet while the phone is.
 
 What is deliberately absent, and why, is in [`docs/PROJECT.md`](docs/PROJECT.md).
 
@@ -76,7 +74,7 @@ To have the gate run before every commit:
 git config core.hooksPath .githooks
 ```
 
-**178 tests**: 40 in the domain, 3 in the data module, 135 in the app. The domain is gated at 90% line and 90% branch
+**186 tests**: 40 in the domain, 3 in the data module, 143 in the app. The domain is gated at 90% line and 90% branch
 coverage and currently sits at 100% and 98.89%; view models are gated at 85% line. The screens
 are covered by running them, not by counting their lines: code executed under Robolectric is
 invisible to JaCoCo, so their coverage reads as zero and means nothing.
@@ -157,8 +155,8 @@ app/
   game/
     presentation/     ui state, actions, view model, screen, top bar, board,
                       how a square is painted, the win card and the celebration
-                      over a solved board, the sounds it makes, and the route
-                      that carries the size
+                      over a solved board, how a piece lands and flinches, the
+                      sounds it makes, and the route that carries the size
   history/
     domain/           a solved board, the repository that keeps them, and the
                       clock a record is stamped with
