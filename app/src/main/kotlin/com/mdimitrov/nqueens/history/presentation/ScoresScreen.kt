@@ -49,9 +49,9 @@ import com.mdimitrov.nqueens.theme.HairlineBorder
 import com.mdimitrov.nqueens.theme.NQueensTheme
 import com.mdimitrov.nqueens.theme.Radii
 import com.mdimitrov.nqueens.theme.Spacing
+import com.mdimitrov.nqueens.theme.TouchTarget
 
 private val RankSide = 24.dp
-private val DeleteSide = 48.dp
 private val DeleteGlyph = 18.dp
 private val NewGameHeight = 60.dp
 
@@ -164,7 +164,7 @@ private fun Header(
         }
 
         if (canClear) {
-            TextButton(onClick = onClearAll) {
+            TextButton(onClick = onClearAll, modifier = Modifier.heightIn(min = TouchTarget)) {
                 Text(
                     text = stringResource(R.string.scores_clear_all),
                     style = MaterialTheme.typography.labelLarge,
@@ -260,7 +260,7 @@ private fun ScoreRow(
                 modifier =
                     Modifier
                         .padding(start = Spacing.sm)
-                        .size(DeleteSide)
+                        .size(TouchTarget)
                         .clip(CircleShape)
                         .clickable { onDelete(solve.id) }
                         .semantics { contentDescription = erase },
@@ -346,7 +346,7 @@ private fun ClearAllDialog(
         title = { Text(text = stringResource(R.string.scores_clear_title)) },
         text = { Text(text = stringResource(R.string.scores_clear_body)) },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = TouchTarget)) {
                 Text(
                     text = stringResource(R.string.scores_clear_confirm),
                     color = NQueensTheme.board.conflict,
@@ -354,7 +354,7 @@ private fun ClearAllDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = TouchTarget)) {
                 Text(text = stringResource(R.string.scores_cancel))
             }
         },

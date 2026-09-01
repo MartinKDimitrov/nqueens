@@ -46,18 +46,15 @@ import com.mdimitrov.nqueens.theme.HairlineBorder
 import com.mdimitrov.nqueens.theme.NQueensTheme
 import com.mdimitrov.nqueens.theme.Radii
 import com.mdimitrov.nqueens.theme.Spacing
+import com.mdimitrov.nqueens.theme.TouchTarget
 
 private val StepperHeight = 68.dp
 private val StepperButtonSide = 40.dp
 
-// What a finger gets, which is not what is painted: the button is drawn at its own size inside a
-// target of the 48 dp the accessibility guidelines ask for.
-private val TouchTarget = 48.dp
 private val VariantRowHeight = 56.dp
 private val StartButtonHeight = 60.dp
 private val PieceIconSide = 22.dp
 private val TitleLetterSpacing = 1.5.sp
-private val ScoresButtonHeight = 48.dp
 private const val DISABLED_ALPHA = 0.4f
 
 @Composable
@@ -151,7 +148,7 @@ private fun Choices(
             Modifier
                 .padding(top = Spacing.md)
                 .fillMaxWidth()
-                .heightIn(min = ScoresButtonHeight),
+                .heightIn(min = TouchTarget),
         shape = RoundedCornerShape(Radii.md),
         border = BorderStroke(HairlineBorder, NQueensTheme.board.border),
     ) {

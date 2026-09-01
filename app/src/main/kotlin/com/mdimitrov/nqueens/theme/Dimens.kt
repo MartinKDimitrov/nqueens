@@ -12,6 +12,12 @@ internal object Spacing {
     val xl = 32.dp
 }
 
+/**
+ * The smallest a control may be to a finger, whatever it is painted at. Not a design token: the
+ * accessibility guidelines ask for it and the design does not name it.
+ */
+internal val TouchTarget = 48.dp
+
 /** The hairline the design draws around every card and panel. */
 internal val HairlineBorder = 1.dp
 

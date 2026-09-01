@@ -11,13 +11,13 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.unit.dp
 import com.mdimitrov.nqueens.R
 import com.mdimitrov.nqueens.domain.MIN_BOARD_SIZE
 import com.mdimitrov.nqueens.puzzle.LARGEST_PLAYABLE_BOARD
 import com.mdimitrov.nqueens.puzzle.Queens
 import com.mdimitrov.nqueens.setup.domain.DEFAULT_BOARD_SIZE
 import com.mdimitrov.nqueens.theme.NQueensTheme
+import com.mdimitrov.nqueens.theme.TouchTarget
 import org.junit.Rule
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -27,8 +27,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-
-private val TOUCH_TARGET = 48.dp
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -151,8 +149,8 @@ class SetupScreenTest {
         for (button in listOf("Smaller board", "Larger board")) {
             compose
                 .onNodeWithContentDescription(button)
-                .assertWidthIsEqualTo(TOUCH_TARGET)
-                .assertHeightIsEqualTo(TOUCH_TARGET)
+                .assertWidthIsEqualTo(TouchTarget)
+                .assertHeightIsEqualTo(TouchTarget)
         }
     }
 

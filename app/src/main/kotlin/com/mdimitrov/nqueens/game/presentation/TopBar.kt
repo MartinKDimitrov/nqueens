@@ -38,10 +38,10 @@ import com.mdimitrov.nqueens.theme.HairlineBorder
 import com.mdimitrov.nqueens.theme.NQueensTheme
 import com.mdimitrov.nqueens.theme.Radii
 import com.mdimitrov.nqueens.theme.Spacing
+import com.mdimitrov.nqueens.theme.TouchTarget
 
 private val GlyphSize = 22.dp
 private val PillHeight = 64.dp
-private val BackButtonSide = 48.dp
 
 // Below this window width the three pills and the back button cannot share a line without the
 // clock breaking across two: at 320 dp each pill is about 58 dp wide and the clock needs 62.
@@ -106,7 +106,7 @@ private fun BackButton(
     Box(
         modifier =
             Modifier
-                .size(BackButtonSide)
+                .size(TouchTarget)
                 .clip(RoundedCornerShape(Radii.md))
                 .background(MaterialTheme.colorScheme.surface)
                 .border(HairlineBorder, colors.border, RoundedCornerShape(Radii.md))
