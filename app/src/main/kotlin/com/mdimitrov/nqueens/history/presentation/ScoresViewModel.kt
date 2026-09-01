@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mdimitrov.nqueens.history.domain.SolveRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.retryWhen
@@ -44,10 +45,26 @@ internal class ScoresViewModel
         }
 
         fun onDelete(id: Long) {
-            viewModelScope.launch { runCatching { solves.delete(id) } }
+            viewModelScope.launch { swallowing { solves.delete(id) } }
         }
 
         fun onClearAll() {
-            viewModelScope.launch { runCatching { solves.clear() } }
+            viewModelScope.launch { swallowing { solves.clear() } }
+        }
+
+        /**
+         * A table that refuses costs the row, not the screen. `runCatching` would do as much and
+         * would also swallow the cancellation that ends this scope, which is the one exception
+         * that has to travel.
+         */
+        @Suppress("SwallowedException", "TooGenericExceptionCaught")
+        private suspend fun swallowing(write: suspend () -> Unit) {
+            try {
+                write()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (refused: Exception) {
+                Unit
+            }
         }
     }
