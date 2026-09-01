@@ -7,7 +7,11 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -35,6 +39,11 @@ private val PieceCorner = 2.dp
 /**
  * Where the pieces come to rest, in fractions of the screen. The first six are the ones
  * design/screens/win.svg draws; the rest are here because six read as a diagram once they move.
+ *
+ * The twelve that are not the design's keep clear of the card, which covers the middle of the
+ * screen from 0.06 to 0.94 across and 0.24 to 0.76 down: a piece that comes to rest behind it is
+ * drawn and never seen. Two of the design's six do land there, and are left where the mockup put
+ * them — it draws a smaller card than the app does.
  */
 internal val ConfettiRest =
     listOf(
@@ -44,16 +53,16 @@ internal val ConfettiRest =
         0.76f to 0.82f,
         0.50f to 0.12f,
         0.38f to 0.88f,
-        0.08f to 0.42f,
-        0.92f to 0.58f,
+        0.10f to 0.22f,
+        0.90f to 0.78f,
         0.30f to 0.06f,
         0.66f to 0.94f,
         0.06f to 0.66f,
         0.94f to 0.34f,
-        0.24f to 0.34f,
+        0.34f to 0.20f,
         0.72f to 0.10f,
         0.18f to 0.94f,
-        0.86f to 0.72f,
+        0.62f to 0.80f,
         0.46f to 0.96f,
         0.58f to 0.04f,
     )
@@ -108,13 +117,19 @@ internal fun leadOf(
 internal fun Celebration(modifier: Modifier = Modifier) {
     val colors = NQueensTheme.board
     val paints = listOf(colors.hint, MaterialTheme.colorScheme.primary, colors.success)
-    val progress = remember { Animatable(0f) }
+    // The burst belongs to the moment the board was solved, not to the composition. One that
+    // starts again on the way back from the records reads as a second win.
+    var burst by rememberSaveable { mutableStateOf(false) }
+    val progress = remember { Animatable(if (burst) 1f else 0f) }
 
     LaunchedEffect(Unit) {
-        progress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(CELEBRATION_MILLIS, easing = LinearOutSlowInEasing),
-        )
+        if (!burst) {
+            burst = true
+            progress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(CELEBRATION_MILLIS, easing = LinearOutSlowInEasing),
+            )
+        }
     }
 
     Canvas(modifier = modifier.testTag(CELEBRATION_TAG)) {
