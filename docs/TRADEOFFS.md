@@ -136,7 +136,7 @@ not one — better stated plainly than claimed as an isolation that does not exi
 
 ---
 
-## D6 — Animations: the celebration is drawn in Compose, and nothing else moves
+## D6 — Animations are drawn in Compose, as pure functions of one number
 
 **Context.** The brief asks for placement and victory animation.
 
@@ -152,9 +152,15 @@ animation-agnostic: what moves is a pure function of one number, in the presenta
 What is drawn can therefore be replaced without touching what decides when to draw it — the layer
 is one composable and one number wide.
 
-**Cost, accepted.** Placement bounce and conflict shake are not built. They are per-cell, and
-per-cell motion earns its keep only once the board itself feels alive, which is a later concern
-than a win the player waited for.
+**And then the same shape again, per cell.** The placement bounce and the conflict flinch were
+built last, in `SquareMotion.kt`, to the pattern the celebration set: `landingAt` and `shakeAt`
+are pure functions of a number between 0 and 1, and two composables drive them. They were left
+until last on purpose — per-cell motion earns its keep only once the board itself feels alive,
+which is a later concern than a win the player waited for.
+
+**Cost, accepted.** Motion drawn in a graphics layer moves nothing a test can measure. The curves
+and their drivers are asserted; that `Square` passes the two numbers to the layer is not, so an
+animation computed and never drawn would pass the suite. Recorded in `PROJECT.md` §6.
 
 **Revisit if.** An authored animation arrives from a designer, or the celebration is asked to
 carry more than a burst — then the layer is the seam it replaces, and the function is what tells
@@ -170,8 +176,9 @@ it, and Setup names it in the variant row.
 
 **Why.** The container was wired in the step that needed it, not before: annotations a reviewer
 has to read past to find the code are a cost. It carried one binding for as long as the app had
-one dependency; persistence made it six, across five modules — the variant, the connection, the
-puzzle's database, its DAO, the repository over it and the clock a record is stamped with. The seam does not rest on the container either — `conflicts` and `snapshotOf`
+one dependency; persistence made it seven, across seven modules — the variant, the connection,
+the puzzle's database, its DAO, the repository over it, the clock a record is stamped with, and
+the scope the write runs in. The seam does not rest on the container either — `conflicts` and `snapshotOf`
 take rules with **no default**, so no call site can silently assume N-Queens even where nothing
 is injected.
 
@@ -311,3 +318,36 @@ silently never reports a best time again for a board the player has already solv
 **Cost.** None yet. Nothing has been released, so no file on any device holds the old column and
 there is no migration to write — the first version is the one with the key. The schema is exported
 to `app/schemas/`, which is what the first real migration will be written and tested against.
+
+---
+
+## D15 — A solved board is written down outside the screen that solved it
+
+**Options.** The view model's own `viewModelScope`; a `CoroutineScope` that lives as long as the
+application, injected; `NonCancellable` around the two calls.
+
+**Decision.** **An application-scoped `CoroutineScope`**, provided once as a `@Singleton` and
+injected into `GameViewModel` under an `@ApplicationScope` qualifier. The ticker and everything
+else that only feeds the screen stay in `viewModelScope`.
+
+**Why.** The record is not work for the screen; it is the only trace of what the player did.
+`viewModelScope` is cancelled when the destination is popped, and the write begins with a read —
+the first read of a session, which is the call that opens the database file. A back press inside
+that window dropped the row in silence, and the cancellation was rethrown deliberately, so
+nothing reported it. An audit reproduced it: the board was solved, the store cleared, and the
+table never saw the row.
+
+**Why not `NonCancellable`.** It is two lines and it protects the work already running, but it
+says "ignore cancellation" where what is meant is "this does not belong to the screen". The scope
+says which, and the qualifier names it at the call site.
+
+**Cost.** One more binding, and a scope that is never cancelled — deliberately, since it lives as
+long as the process. Its supervisor keeps one failed write from taking the next one with it.
+
+**And a thread, which is the part worth watching.** The write left `Dispatchers.Main.immediate`
+for `Dispatchers.Default`, and `record` reads `gamesStarted` to decide whether the answer still
+belongs to the game on screen. That counter is the screen's own, written when a board is reset,
+so the comparison is made back on the main thread rather than from the background: the row is
+written off the screen, the question about which game it belongs to is asked where the game is
+played. Read it from the other thread and the guard becomes a stale read of a field with no
+ordering behind it — which is what the first version of this change did.

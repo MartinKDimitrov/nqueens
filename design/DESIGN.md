@@ -23,18 +23,19 @@ drawn from those values; never introduce a color that is not in `tokens.json`.
   carries the state non-visually is the square's content description, which reads "queen under
   attack".
 - Contrast is not uniform, and the pairings below are text against its own background at AA's
-  4.5:1. The pairing the app actually draws is `conflict` on `conflictGlow` — 3.07:1 in light and
-  5.05:1 in dark — because a square under attack always takes the glow behind the glyph; a
-  conflict colour is never drawn on a plain board square in either theme. The rest of the list is
-  about states the mockups define and the app does not: dark falls short at `blocked` on
-  `surface` (2.79:1) and `fixed` on `boardLight` (4.38:1), light at `hint` on `surface` (2.09:1),
-  `success` on `surface` (3.45:1), which the win card's "new best" line does draw, `conflict` on
-  `background` (4.20:1), which the records screen's **Clear all** draws, `blocked` on `surface`
-  (2.59:1) and on `boardDark`
-  (1.44:1). The conflict pairing is the one that matters, since it is the state the game relies
-  on. The shipped square marks it with a tinted background
-  and a tinted glyph; the outline the mockup draws is not there, so the non-visual carrier is
-  the content description alone.
+  4.5:1. **Three of them the app draws**, and all three are under the bar in the light theme:
+  `conflict` on `conflictGlow` at 3.07:1 — the status strip's message, and the square under
+  attack, which always takes the glow behind the glyph, so a conflict colour is never drawn on a
+  plain board square in either theme; `success` on `surface` at 3.45:1, the win card's "new best"
+  line; and `conflict` on `background` at 4.20:1, the records screen's **Clear all**. In the dark
+  theme the conflict pairing rises to 5.05:1 and clears it. The conflict pairing is the one that
+  matters, since it is the state the game relies on: the shipped square marks it with a tinted
+  background and a tinted glyph, the outline the mockup draws is not there, and the non-visual
+  carrier is the content description alone.
+- **The rest are states the mockups define and the app does not**, listed so the numbers are on
+  record if they are ever built: dark falls short at `blocked` on `surface` (2.79:1) and `fixed`
+  on `boardLight` (4.38:1); light at `hint` on `surface` (2.09:1) and `blocked` on `surface`
+  (2.59:1) and on `boardDark` (1.44:1).
 
 ## Screens
 
