@@ -28,6 +28,15 @@ allprojects {
             target("*.gradle.kts")
             ktlint()
         }
+        // The documents are hand-wrapped and hand-aligned on purpose, so nothing here reflows
+        // them: flexmark centres table headings and drops the indent under a list item, which
+        // reads worse in plain text than what it replaces. This catches the drift instead.
+        format("markdown") {
+            target("**/*.md")
+            targetExclude("**/build/**", "**/*.local.md")
+            trimTrailingWhitespace()
+            endWithNewline()
+        }
     }
 }
 
