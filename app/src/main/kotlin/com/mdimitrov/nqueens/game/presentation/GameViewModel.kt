@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mdimitrov.nqueens.ApplicationScope
 import com.mdimitrov.nqueens.domain.GameAction
 import com.mdimitrov.nqueens.domain.GameState
 import com.mdimitrov.nqueens.domain.reduce
@@ -17,8 +18,11 @@ import com.mdimitrov.nqueens.history.domain.SolveRepository
 import com.mdimitrov.nqueens.puzzle.Variant
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
@@ -31,6 +35,7 @@ internal class GameViewModel
         private val variant: Variant,
         private val solves: SolveRepository,
         private val clock: Clock,
+        @ApplicationScope private val writes: CoroutineScope,
         savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
         private var state by mutableStateOf(
@@ -78,7 +83,7 @@ internal class GameViewModel
                 // board as it was finished, whatever the dispatcher does with the launch.
                 val solved = state
                 val game = gamesStarted
-                viewModelScope.launch { record(solved, game) }
+                writes.launch { record(solved, game) }
             }
         }
 
@@ -120,8 +125,13 @@ internal class GameViewModel
                     ),
                 )
                 // The board may have been played again while the table was answering, and the card
-                // of a game that has ended is not the card on screen.
-                if (game == gamesStarted) previousBestSeconds = best
+                // of a game that has ended is not the card on screen. The question is asked back
+                // on the thread that plays the game: to write outlives the screen and runs off
+                // it, but `gamesStarted` is the screen's own count and is only read where it is
+                // written.
+                withContext(Dispatchers.Main) {
+                    if (game == gamesStarted) previousBestSeconds = best
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (refused: Exception) {

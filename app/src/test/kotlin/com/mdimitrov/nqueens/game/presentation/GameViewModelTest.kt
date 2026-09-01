@@ -1,6 +1,9 @@
 package com.mdimitrov.nqueens.game.presentation
 
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
 import com.mdimitrov.nqueens.domain.Cell
 import com.mdimitrov.nqueens.domain.CellStatus
 import com.mdimitrov.nqueens.domain.GameAction
@@ -13,6 +16,7 @@ import com.mdimitrov.nqueens.history.domain.Solve
 import com.mdimitrov.nqueens.history.domain.SolveRepository
 import com.mdimitrov.nqueens.puzzle.Queens
 import com.mdimitrov.nqueens.puzzle.Variant
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -29,6 +33,10 @@ import kotlin.time.Duration.Companion.seconds
 
 class GameViewModelTest {
     private val clock = StandardTestDispatcher()
+
+    // What the application provides in production: a scope that outlives any one screen. It runs
+    // on the same test clock so a record still lands when the clock is advanced.
+    private val writes = CoroutineScope(clock)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @BeforeTest
@@ -304,6 +312,28 @@ class GameViewModelTest {
         assertEquals(2, table.added.size, "and the next game is written")
     }
 
+    @Test
+    fun `a board solved and left at once is still written down`() {
+        val solves = FakeSolves()
+        val viewModel = gameOf(solves = solves)
+        // A destination holds its view model in a store; popping the destination clears it, which
+        // is what cancels the scope the screen's own work runs in.
+        val store = ViewModelStore()
+        ViewModelProvider(store, factoryFor(viewModel))[GameViewModel::class.java]
+
+        solveThe(viewModel)
+        store.clear()
+        clock.scheduler.advanceUntilIdle()
+
+        assertEquals(1, solves.added.size, "the player left before the table answered and lost the board")
+    }
+
+    private fun factoryFor(viewModel: GameViewModel) =
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = viewModel as T
+        }
+
     private fun gameOf(
         size: Int = 4,
         variant: Variant = Queens,
@@ -313,6 +343,7 @@ class GameViewModelTest {
         variant = variant,
         solves = solves,
         clock = Clock { finishedAt },
+        writes = writes,
         savedStateHandle = SavedStateHandle(mapOf(SIZE_ARGUMENT to size)),
     )
 
