@@ -8,6 +8,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -15,6 +16,13 @@ import kotlin.test.assertTrue
 class GameSoundsTest {
     private val context: Context = RuntimeEnvironment.getApplication()
     private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+    @Test
+    fun `every sound names a file of its own`() {
+        val files = GameSound.entries.map { it.resource }
+
+        assertEquals(GameSound.entries.size, files.toSet().size, "two sounds share a file: $files")
+    }
 
     @Test
     fun `a sound reaches the device, and a phone on silent stays silent`() {

@@ -2,6 +2,7 @@ package com.mdimitrov.nqueens.game.presentation
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -32,6 +33,7 @@ import com.mdimitrov.nqueens.domain.snapshotOf
 import com.mdimitrov.nqueens.puzzle.LARGEST_PLAYABLE_BOARD
 import com.mdimitrov.nqueens.puzzle.Queens
 import com.mdimitrov.nqueens.theme.NQueensTheme
+import com.mdimitrov.nqueens.theme.TouchTarget
 import org.junit.Rule
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -451,10 +453,10 @@ class GameScreenTest {
     fun `placing a queen is heard, and taking her back sounds different`() {
         boardWith(Cell(0, 0))
 
-        compose.onNodeWithContentDescription("Row 1, column 1, queen").performClick()
         compose.onNodeWithContentDescription(square(2)).performClick()
+        compose.onNodeWithContentDescription("Row 1, column 1, queen").performClick()
 
-        assertEquals(listOf(GameSound.REMOVE, GameSound.PLACE), played)
+        assertEquals(listOf(GameSound.PLACE, GameSound.REMOVE), played)
     }
 
     @Test
@@ -483,6 +485,48 @@ class GameScreenTest {
         shown.value = uiState(arrayOf(Cell(0, 0), Cell(1, 1)), BOARD_SIZE)
         compose.waitForIdle()
         assertEquals(listOf(GameSound.CONFLICT), played, "an attack resolved is not an attack made")
+    }
+
+    @Test
+    fun `the win is announced once, however often the screen comes back`() {
+        val shown = mutableStateOf(true)
+        val solved = uiState(arrayOf(Cell(0, 1), Cell(1, 3), Cell(2, 0), Cell(3, 2)), BOARD_SIZE).board
+        compose.setContent {
+            val holder = rememberSaveableStateHolder()
+            CompositionLocalProvider(
+                LocalHapticFeedback provides haptics,
+                LocalSounds provides Sounds { played += it },
+            ) {
+                NQueensTheme {
+                    if (shown.value) {
+                        // What the navigation host does around every destination: the composition
+                        // goes away on the trip to the records and its saved state comes back.
+                        holder.SaveableStateProvider("game") {
+                            GameContent(
+                                state = GameUiState(solved, Queens, WINNING_TIME),
+                                actions = GameActions(onTap = {}, onReset = {}, onBack = {}, onScores = {}),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+
+        compose.runOnIdle { shown.value = false }
+        compose.runOnIdle { shown.value = true }
+        compose.waitForIdle()
+
+        assertEquals(listOf(GameSound.WIN), played, "the win sounded again on the way back")
+        assertEquals(listOf(HapticFeedbackType.LongPress), felt, "the win was felt again on the way back")
+    }
+
+    @Test
+    fun `the win card's actions are the size a finger needs`() {
+        solvedBoard(elapsed = WINNING_TIME, previousBest = null)
+
+        compose.onNodeWithText("Play again").assertHeightIsAtLeast(TouchTarget)
+        compose.onNodeWithText("View scores").assertHeightIsAtLeast(TouchTarget)
     }
 
     @Test

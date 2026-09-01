@@ -5,6 +5,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertWidthIsEqualTo
@@ -21,6 +22,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.mdimitrov.nqueens.history.domain.Solve
 import com.mdimitrov.nqueens.theme.NQueensTheme
+import com.mdimitrov.nqueens.theme.TouchTarget
 import org.junit.Rule
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -38,7 +40,10 @@ import kotlin.test.assertTrue
 private const val DAY = 86_400_000L
 private const val HOUR = 3_600_000L
 private val SAME_ROW = 8.dp
-private val TOUCH_TARGET = 48.dp
+
+// A record's row is one line of text; four times that means the date wrapped instead of
+// giving way to the time beside it.
+private val ONE_ROW = 56.dp
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -263,8 +268,11 @@ class ScoresScreenTest {
             }
         }
 
-        val time = compose.onNodeWithText("01:24").getUnclippedBoundsInRoot()
+        val time = compose.onNodeWithText("01:24", useUnmergedTree = true).getUnclippedBoundsInRoot()
         assertTrue(time.right > time.left, "the solve time was squeezed out of its own row")
+
+        val row = compose.onNodeWithContentDescription("Rank 1", substring = true).getUnclippedBoundsInRoot()
+        assertTrue(row.bottom - row.top < ONE_ROW, "the row grew to ${row.bottom - row.top}: the date wrapped")
     }
 
     @Test
@@ -303,8 +311,8 @@ class ScoresScreenTest {
         compose.onNodeWithContentDescription("Rank 1, 01:24, Jan 1", substring = true).assertExists()
         compose
             .onNodeWithContentDescription("Delete", substring = true)
-            .assertWidthIsEqualTo(TOUCH_TARGET)
-            .assertHeightIsEqualTo(TOUCH_TARGET)
+            .assertWidthIsEqualTo(TouchTarget)
+            .assertHeightIsEqualTo(TouchTarget)
 
         val row =
             compose
@@ -312,7 +320,18 @@ class ScoresScreenTest {
                 .fetchSemanticsNode()
         val time = compose.onNodeWithText("01:24").fetchSemanticsNode()
 
-        assertEquals(row.id, time.id, "the time is read as an item of its own, not as part of the row")
+        assertEquals(row.id, time.id, "the time is read as part of the row rather than as an item of its own")
+    }
+
+    @Test
+    fun `clearing everything is the size a finger needs, and so is being asked about it`() {
+        scoresOf(solve(size = 8, seconds = 84, id = 1))
+
+        compose.onNodeWithText("Clear all").assertHeightIsAtLeast(TouchTarget)
+
+        compose.onNodeWithText("Clear all").performClick()
+        compose.onNodeWithText("Clear").assertHeightIsAtLeast(TouchTarget)
+        compose.onNodeWithText("Cancel").assertHeightIsAtLeast(TouchTarget)
     }
 
     @Test
