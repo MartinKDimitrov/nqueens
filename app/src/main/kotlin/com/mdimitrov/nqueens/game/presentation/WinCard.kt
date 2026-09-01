@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -21,6 +22,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +46,7 @@ import com.mdimitrov.nqueens.theme.Elevation
 import com.mdimitrov.nqueens.theme.NQueensTheme
 import com.mdimitrov.nqueens.theme.Radii
 import com.mdimitrov.nqueens.theme.Spacing
+import com.mdimitrov.nqueens.theme.TouchTarget
 
 private const val SCRIM_ALPHA = 0.55f
 private const val BADGE_ALPHA = 0.15f
@@ -56,13 +62,19 @@ internal fun WinCard(
     onScores: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // The card arrives on its own, so it is also felt on its own.
+    // The card arrives on its own, so it is also felt on its own — once. The composition is
+    // rebuilt by a rotation and by the trip to the records and back, while the win it announces
+    // happened only the first time, so the flag outlives the composition rather than the board.
     val haptics = LocalHapticFeedback.current
     val sounds = LocalSounds.current
+    var announced by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-        sounds.play(GameSound.WIN)
+        if (!announced) {
+            announced = true
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            sounds.play(GameSound.WIN)
+        }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -140,23 +152,35 @@ private fun WinBody(
         FinishingTime(seconds = state.elapsedSeconds)
         NewBest(seconds = state.elapsedSeconds, previousBest = state.previousBestSeconds)
 
-        Button(
-            onClick = onPlayAgain,
-            shape = RoundedCornerShape(Radii.md),
-            modifier = Modifier.fillMaxWidth().padding(top = Spacing.lg),
-        ) {
-            Text(
-                text = stringResource(R.string.game_play_again),
-                style = MaterialTheme.typography.labelLarge,
-            )
-        }
-        TextButton(onClick = onScores, modifier = Modifier.padding(top = Spacing.xs)) {
-            Text(
-                text = stringResource(R.string.game_view_scores),
-                style = MaterialTheme.typography.labelLarge,
-                color = NQueensTheme.board.onSurfaceMuted,
-            )
-        }
+        WinActions(onPlayAgain = onPlayAgain, onScores = onScores)
+    }
+}
+
+/** Another board, or the records. Both are drawn small and take the whole of a finger. */
+@Composable
+private fun WinActions(
+    onPlayAgain: () -> Unit,
+    onScores: () -> Unit,
+) {
+    Button(
+        onClick = onPlayAgain,
+        shape = RoundedCornerShape(Radii.md),
+        modifier = Modifier.fillMaxWidth().padding(top = Spacing.lg).heightIn(min = TouchTarget),
+    ) {
+        Text(
+            text = stringResource(R.string.game_play_again),
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+    TextButton(
+        onClick = onScores,
+        modifier = Modifier.padding(top = Spacing.xs).heightIn(min = TouchTarget),
+    ) {
+        Text(
+            text = stringResource(R.string.game_view_scores),
+            style = MaterialTheme.typography.labelLarge,
+            color = NQueensTheme.board.onSurfaceMuted,
+        )
     }
 }
 

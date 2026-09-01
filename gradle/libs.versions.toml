@@ -34,6 +34,7 @@ compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = 
 compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout" }
 compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }
+compose-runtime-saveable = { group = "androidx.compose.runtime", name = "runtime-saveable" }
 compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 compose-ui-text = { group = "androidx.compose.ui", name = "ui-text" }
 compose-ui-unit = { group = "androidx.compose.ui", name = "ui-unit" }
