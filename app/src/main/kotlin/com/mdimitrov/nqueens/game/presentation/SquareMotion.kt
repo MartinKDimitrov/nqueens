@@ -19,7 +19,8 @@ private const val SETTLED = 1f
 
 private const val ARRIVING = 0.7f
 private const val LANDED = 1f
-private const val TURNS = 1.5f
+private const val LANDING_TURNS = 1.5f
+private const val SHAKE_TURNS = 1.5f
 
 private const val LANDING_MILLIS = 260
 private const val SHAKE_MILLIS = 300
@@ -37,19 +38,19 @@ internal val ShakeWidth = 3.dp
 internal fun landingAt(progress: Float): Float {
     val left = SETTLED - progress.coerceIn(START, SETTLED)
 
-    return LANDED - (LANDED - ARRIVING) * cos(2f * PI.toFloat() * TURNS * (SETTLED - left)) * left * left
+    return LANDED - (LANDED - ARRIVING) * cos(2f * PI.toFloat() * LANDING_TURNS * (SETTLED - left)) * left * left
 }
 
 /**
  * How far a queen is thrown sideways while she flinches, as a fraction of [ShakeWidth].
  *
  * Three passes — right, left, right — each smaller than the last, ending where she started. The
- * damping is what stops it reading as a vibration: 0.83, then 0.5, then 0.17.
+ * damping is what stops it reading as a vibration: it reaches 0.84, then -0.51, then 0.19.
  */
 internal fun shakeAt(progress: Float): Float {
     val t = progress.coerceIn(START, SETTLED)
 
-    return sin(2f * PI.toFloat() * TURNS * t) * (SETTLED - t)
+    return sin(2f * PI.toFloat() * SHAKE_TURNS * t) * (SETTLED - t)
 }
 
 /** A queen's landing, run once when she arrives. One who was already standing does not land. */
@@ -82,6 +83,10 @@ internal fun flinchOf(attacked: Boolean): Float {
         if (attacked && !was) {
             flinch.snapTo(START)
             flinch.animateTo(SETTLED, tween(SHAKE_MILLIS, easing = LinearEasing))
+        } else {
+            // An attack eased before the shake ends cancels it mid-swing, and a cancelled
+            // Animatable keeps the value it had reached. Without this the queen stays crooked.
+            flinch.snapTo(SETTLED)
         }
         was = attacked
     }

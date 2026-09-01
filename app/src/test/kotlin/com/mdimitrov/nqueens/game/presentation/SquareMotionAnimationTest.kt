@@ -1,7 +1,9 @@
 package com.mdimitrov.nqueens.game.presentation
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.junit4.createComposeRule
+import kotlinx.coroutines.delay
 import org.junit.Rule
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -12,6 +14,9 @@ import kotlin.test.assertTrue
 
 private const val AT_REST = 1f
 private const val TOLERANCE = 0.001f
+
+// Far enough into the three hundred the shake takes for the queen to be well off centre.
+private const val MID_SWING = 64L
 
 @RunWith(RobolectricTestRunner::class)
 class SquareMotionAnimationTest {
@@ -34,6 +39,27 @@ class SquareMotionAnimationTest {
 
         assertTrue(sizes.max() > AT_REST, "she never overshot her own size: ${sizes.distinct()}")
         assertEquals(AT_REST, sizes.last(), TOLERANCE, "she did not settle at her own size")
+    }
+
+    @Test
+    fun `a flinch cut short by the trouble ending leaves the queen where she stands`() {
+        val attacked = mutableStateOf(false)
+        val throws = mutableListOf<Float>()
+
+        compose.setContent {
+            throws += flinchOf(attacked.value)
+            // The trouble is made and eased from inside the composition's own clock, so the
+            // shake is cancelled mid-swing the way a fast pair of taps cancels it.
+            LaunchedEffect(Unit) {
+                attacked.value = true
+                delay(MID_SWING)
+                attacked.value = false
+            }
+        }
+        compose.waitForIdle()
+
+        assertTrue(throws.any { abs(it) > TOLERANCE }, "she never moved: ${throws.distinct()}")
+        assertTrue(abs(throws.last()) < TOLERANCE, "she was left ${throws.last()} out of her square")
     }
 
     @Test
