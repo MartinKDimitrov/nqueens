@@ -3,3 +3,7 @@ root = true
 [*.{kt,kts}]
 # Composable functions are named like the thing they draw, in PascalCase.
 ktlint_function_naming_ignore_when_annotated_with = Composable
+
+# The same limit detekt enforces. Left at ktlint's own default the formatter joins lines that
+# static analysis then rejects, and `spotlessApply` writes code `make check` refuses.
+max_line_length = 120

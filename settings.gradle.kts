@@ -20,8 +20,4 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "nqueens"
-
-include(":app")
-include(":core:domain")
-include(":core:data")
+rootProject.name = "Puzzles"
