@@ -108,7 +108,7 @@ internal class PlayViewModel
 
         val uiState: PlayUiState by derivedStateOf {
             PlayUiState(
-                snapshotOf(state, puzzle.rules, puzzle.piecesToSolve(state.size)),
+                snapshotOf(state, puzzle.rules(state.size), puzzle.piecesToSolve(state.size)),
                 puzzle,
                 state.elapsedSeconds,
                 previousBestSeconds,

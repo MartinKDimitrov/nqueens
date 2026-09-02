@@ -53,7 +53,7 @@ public fun snapshotOf(
         size = state.size,
         statuses = statuses,
         piecesLeft = piecesLeft(state.pieces, target = target),
-        piecesUnderAttack = conflicting.size,
+        piecesUnderAttack = conflicting.pieces.size,
         isSolved = state.pieces.size == target && conflicting.isEmpty(),
     )
 }

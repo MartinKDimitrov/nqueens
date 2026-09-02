@@ -30,7 +30,15 @@ public data class Puzzle(
      * shell would be deciding what solving means for a game it knows nothing about.
      */
     public val piecesToSolve: (size: Int) -> Int,
-    public val rules: LineRules,
+    /**
+     * What its pieces threaten along, on a board of that size.
+     *
+     * A function of the size rather than one value, for the same reason [piecesToSolve] is: a
+     * rule may depend on the board it is played on. Nothing in this build needs that yet — the
+     * queens ignore the argument — but a rule that had to see the board could not be given one
+     * afterwards without changing every game module at once.
+     */
+    public val rules: (size: Int) -> LineRules,
     public val text: PuzzleText,
 )
 
