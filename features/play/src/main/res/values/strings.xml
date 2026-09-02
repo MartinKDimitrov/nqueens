@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="play_cell_empty">Row %1$d, column %2$d, empty</string>
+    <string name="play_reset">RESET</string>
+    <string name="play_board_summary">%1$d × %1$d · %2$s</string>
+    <string name="play_tap_hint">Tap a cell to place · tap again to remove</string>
+    <string name="play_back">Back to setup</string>
+    <string name="play_counter_value">%1$d</string>
+    <string name="play_time">TIME</string>
+    <string name="play_solved">Solved!</string>
+    <string name="play_finishing_time">FINISHING TIME</string>
+    <string name="play_play_again">Play again</string>
+    <string name="play_new_best">New best — %1$ds faster than before</string>
+    <string name="play_view_scores">View scores</string>
+    <string name="play_solved_announcement">Solved! %1$s, in %2$s</string>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    A library has no application theme, so the activity a screen test runs in takes the
+    platform's default — which has an action bar, and costs every screen 48 dp of height that
+    the app itself does not. Tests then measure a window the player never sees.
+
+    This gives the test variant the same bare theme the app declares. It reaches nothing that
+    ships: the debug source set of a library is not part of its release artefact.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+</manifest>
