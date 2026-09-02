@@ -23,3 +23,6 @@ dependencyResolutionManagement {
 rootProject.name = "Puzzles"
 
 include(":core:boardlogic")
+include(":core:puzzletype")
+include(":core:solves")
+include(":core:scope")
