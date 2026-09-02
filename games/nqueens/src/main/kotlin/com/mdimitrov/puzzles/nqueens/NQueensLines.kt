@@ -1,7 +1,6 @@
 package com.mdimitrov.puzzles.nqueens
 
 import com.mdimitrov.puzzles.boardlogic.Line
-import com.mdimitrov.puzzles.boardlogic.LineKind
 import com.mdimitrov.puzzles.boardlogic.LineRules
 
 /**
@@ -14,9 +13,9 @@ import com.mdimitrov.puzzles.boardlogic.LineRules
 public val NQueensLines: LineRules =
     LineRules { cell ->
         setOf(
-            Line(LineKind.ROW, cell.row),
-            Line(LineKind.COLUMN, cell.col),
-            Line(LineKind.DESCENDING_DIAGONAL, cell.descendingDiagonal),
-            Line(LineKind.ASCENDING_DIAGONAL, cell.ascendingDiagonal),
+            Line(QueenAxis.ROW, cell.row),
+            Line(QueenAxis.COLUMN, cell.col),
+            Line(QueenAxis.DESCENDING_DIAGONAL, cell.descendingDiagonal),
+            Line(QueenAxis.ASCENDING_DIAGONAL, cell.ascendingDiagonal),
         )
     }

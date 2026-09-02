@@ -119,8 +119,8 @@ class PlayViewModelTest {
 
     @Test
     fun `the game plays by the rules it was given, not by the ones it could assume`() {
-        val rowsOnly = LineRules { cell -> setOf(Line(LineKind.ROW, cell.row)) }
-        val viewModel = gameOf(puzzle = Queens.copy(rules = rowsOnly))
+        val rowsOnly = LineRules { cell -> setOf(Line(RowOnly, cell.row)) }
+        val viewModel = gameOf(puzzle = Queens.copy(rules = { rowsOnly }))
 
         viewModel.onAction(GameAction.Toggle(Cell(0, 0)))
         viewModel.onAction(GameAction.Toggle(Cell(1, 0)))
@@ -430,3 +430,6 @@ private class RefusingRecords : RecordSolve {
         return rows.record(board)
     }
 }
+
+/** A kind of line for a rule that only needs one. */
+private object RowOnly : LineKind

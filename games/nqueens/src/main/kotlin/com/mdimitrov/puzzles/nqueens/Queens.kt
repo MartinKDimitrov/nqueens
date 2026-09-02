@@ -24,7 +24,7 @@ public val Queens: Puzzle =
         sizes = SMALLEST_SOLVABLE..LARGEST_PLAYABLE,
         // One queen per row, which is the same as one per board size.
         piecesToSolve = { size -> size },
-        rules = NQueensLines,
+        rules = { NQueensLines },
         text =
             PuzzleText(
                 subtitle = R.string.nqueens_subtitle,

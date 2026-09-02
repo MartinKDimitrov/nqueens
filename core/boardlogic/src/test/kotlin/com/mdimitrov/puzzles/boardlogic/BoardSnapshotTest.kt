@@ -91,8 +91,8 @@ class BoardSnapshotTest {
         val diagonals =
             LineRules { cell ->
                 setOf(
-                    Line(LineKind.DESCENDING_DIAGONAL, cell.descendingDiagonal),
-                    Line(LineKind.ASCENDING_DIAGONAL, cell.ascendingDiagonal),
+                    Line(TestAxis.DESCENDING, cell.descendingDiagonal),
+                    Line(TestAxis.ASCENDING, cell.ascendingDiagonal),
                 )
             }
 

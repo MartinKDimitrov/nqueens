@@ -28,14 +28,52 @@ class ConflictsTest {
     @Test
     fun `both queens sharing a row are flagged`() {
         val queens = setOf(Cell(2, 1), Cell(2, 5))
-        assertEquals(queens, conflicts(queens, FourLines))
+        assertEquals(queens, conflicts(queens, FourLines).pieces)
     }
 
     @Test
     fun `only the queens actually attacking are flagged`() {
         val attacking = setOf(Cell(0, 0), Cell(3, 3))
         val safe = Cell(1, 4)
-        assertEquals(attacking, conflicts(attacking + safe, FourLines))
+        assertEquals(attacking, conflicts(attacking + safe, FourLines).pieces)
+    }
+
+    @Test
+    fun `a flagged queen names every queen threatening her`() {
+        // The pairing is the part a board cannot ask for once it is thrown away: the middle queen
+        // here is in trouble twice over, and "in trouble" is the only thing a set could have said.
+        // Chosen so the outer two reach the middle and not each other: (4,0) and (0,4) would have
+        // shared an ascending diagonal, which is the sort of thing this test exists to notice.
+        val left = Cell(4, 0)
+        val middle = Cell(4, 4)
+        val above = Cell(1, 4)
+
+        val flagged = conflicts(setOf(left, middle, above), FourLines)
+
+        assertEquals(setOf(left, above), flagged.attackersOf(middle))
+        assertEquals(setOf(middle), flagged.attackersOf(left))
+        assertEquals(setOf(middle), flagged.attackersOf(above))
+    }
+
+    @Test
+    fun `a queen threatening two along one line names both of them`() {
+        // Three on a row: each is threatened by the other two, and nobody threatens herself.
+        val row = setOf(Cell(2, 0), Cell(2, 3), Cell(2, 7))
+
+        val flagged = conflicts(row, FourLines)
+
+        row.forEach { queen -> assertEquals(row - queen, flagged.attackersOf(queen), "$queen") }
+    }
+
+    @Test
+    fun `a square nothing threatens names nobody`() {
+        val attacking = setOf(Cell(0, 0), Cell(3, 3))
+        val safe = Cell(1, 4)
+
+        val flagged = conflicts(attacking + safe, FourLines)
+
+        assertTrue(flagged.attackersOf(safe).isEmpty(), "a queen standing clear was given attackers")
+        assertTrue(flagged.attackersOf(Cell(7, 7)).isEmpty(), "an empty square was given attackers")
     }
 
     @Test
@@ -71,7 +109,7 @@ class ConflictsPropertyTest {
             val pieces = randomPieces(size, random)
             assertEquals(
                 conflictByPairs(pieces, FourLinesByPairs),
-                conflicts(pieces, FourLines),
+                conflicts(pieces, FourLines).pieces,
                 "disagreed on $pieces",
             )
         }

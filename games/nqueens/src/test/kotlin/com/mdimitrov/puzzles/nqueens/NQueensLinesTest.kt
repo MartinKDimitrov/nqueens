@@ -2,7 +2,6 @@ package com.mdimitrov.puzzles.nqueens
 
 import com.mdimitrov.puzzles.boardlogic.Cell
 import com.mdimitrov.puzzles.boardlogic.Line
-import com.mdimitrov.puzzles.boardlogic.LineKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -27,10 +26,10 @@ class NQueensLinesTest {
     fun `a queen stands on her row, her column and both her diagonals`() {
         assertEquals(
             setOf(
-                Line(LineKind.ROW, 2),
-                Line(LineKind.COLUMN, 3),
-                Line(LineKind.DESCENDING_DIAGONAL, -1),
-                Line(LineKind.ASCENDING_DIAGONAL, 5),
+                Line(QueenAxis.ROW, 2),
+                Line(QueenAxis.COLUMN, 3),
+                Line(QueenAxis.DESCENDING_DIAGONAL, -1),
+                Line(QueenAxis.ASCENDING_DIAGONAL, 5),
             ),
             NQueensLines.linesThrough(Cell(row = 2, col = 3)),
             "the four lines through a square, by kind and index",
@@ -56,10 +55,10 @@ class NQueensLinesTest {
         val origin = Cell(row = 3, col = 3)
         val alongEach =
             mapOf(
-                LineKind.ROW to Cell(row = 3, col = 6),
-                LineKind.COLUMN to Cell(row = 6, col = 3),
-                LineKind.DESCENDING_DIAGONAL to Cell(row = 5, col = 5),
-                LineKind.ASCENDING_DIAGONAL to Cell(row = 5, col = 1),
+                QueenAxis.ROW to Cell(row = 3, col = 6),
+                QueenAxis.COLUMN to Cell(row = 6, col = 3),
+                QueenAxis.DESCENDING_DIAGONAL to Cell(row = 5, col = 5),
+                QueenAxis.ASCENDING_DIAGONAL to Cell(row = 5, col = 1),
             )
 
         val missing =

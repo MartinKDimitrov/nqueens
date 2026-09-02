@@ -9,7 +9,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
-private val AnyRules = LineRules { cell -> setOf(Line(LineKind.ROW, cell.row)) }
+/** One kind, because these tests only need a line to exist, not to mean anything. */
+private enum class AnyAxis : LineKind { ROW, }
+
+private val AnyRules = LineRules { cell -> setOf(Line(AnyAxis.ROW, cell.row)) }
 
 // The ids stand for resources this module has none of and this test never resolves: what is
 // under test is which puzzles a build may be assembled from, not what they say.
@@ -28,7 +31,7 @@ private fun puzzle(
     piece = 2,
     sizes = sizes,
     piecesToSolve = piecesToSolve,
-    rules = AnyRules,
+    rules = { AnyRules },
     text = AnyText,
 )
 

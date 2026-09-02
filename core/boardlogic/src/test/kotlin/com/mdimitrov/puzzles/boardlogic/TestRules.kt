@@ -10,9 +10,9 @@ package com.mdimitrov.puzzles.boardlogic
 internal val FourLines: LineRules =
     LineRules { cell ->
         setOf(
-            Line(LineKind.ROW, cell.row),
-            Line(LineKind.COLUMN, cell.col),
-            Line(LineKind.DESCENDING_DIAGONAL, cell.descendingDiagonal),
-            Line(LineKind.ASCENDING_DIAGONAL, cell.ascendingDiagonal),
+            Line(TestAxis.ROW, cell.row),
+            Line(TestAxis.COLUMN, cell.col),
+            Line(TestAxis.DESCENDING, cell.descendingDiagonal),
+            Line(TestAxis.ASCENDING, cell.ascendingDiagonal),
         )
     }
