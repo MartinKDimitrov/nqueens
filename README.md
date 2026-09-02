@@ -88,16 +88,16 @@ than reporting nothing.
 make check-device
 ```
 
-**269 tests**, each module carrying its own — every module but `:core:solves`, which holds
+**274 tests**, each module carrying its own — every module but `:core:solves`, which holds
 one interface and one data class, and has nothing to run:
 
 | Module             | Tests |
 |--------------------|-------|
 | `:features:play`   |    98 |
-| `:features:scores` |    51 |
-| `:core:boardlogic` |    41 |
+| `:features:scores` |    52 |
+| `:core:boardlogic` |    44 |
 | `:features:setup`  |    26 |
-| `:app`             |    17 |
+| `:app`             |    18 |
 | `:core:settings`   |    10 |
 | `:core:puzzletype` |     9 |
 | `:games:nqueens`   |     6 |

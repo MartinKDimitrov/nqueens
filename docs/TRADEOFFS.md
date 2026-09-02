@@ -12,8 +12,8 @@ returned, so the UI can highlight them. Whatever does this must not hard-code th
 a queen, or the validator has to be rewritten whenever the rules change.
 
 **Options.**
-- **A — Pairwise** over `PairwiseRules.attacks`: `O(k²)`. Works for any rule, including ones
-  that are not lines at all (a knight's move).
+- **A — Pairwise** over `PairwiseRules.attacks`: `O(k²)`. Works for any rule, including ones a
+  rule author cannot name as lines.
 - **B — Counters over the four queen axes** (row, col, `r−c`, `r+c`): `O(k)`, but the axes are
   N-Queens geometry written into the validator.
 - **C — Counters over lines the *rules* supply**: `O(k)`, and the geometry stays in the rule.
@@ -25,7 +25,7 @@ the general case; `LineRules.linesThrough(cell)` is the structural form the game
 `conflicts()` counts how many queens occupy each line and flags those on a line holding more
 than one. **A is kept as the test oracle. Bitmask is not used for validation.**
 
-**Why.** The UI needs the conflict *set*, not a boolean, which rules out D. B is fast but puts
+**Why.** The UI needs the conflicted pieces, not a boolean, which rules out D. B is fast but puts
 queen geometry in the validator, so the rules and the validator stop being separable. C keeps
 both: `O(k)`
 detection, and the geometry supplied by whichever rule is in play.
@@ -33,8 +33,22 @@ detection, and the geometry supplied by whichever rule is in play.
 Counting also removes the identity-pair problem for free: a lone queen occupies each of its
 lines once, and the test is `> 1`, so nothing has to compare a queen with itself.
 
-**Costs, accepted.** Two rule interfaces instead of one. Rules whose threats are not lines —
-Amazons, with its knight move — cannot use the fast path and must go through `attacks`.
+**Costs, accepted.** Two rule interfaces instead of one.
+
+This decision also said that rules whose threats are not lines — Amazons, with its knight move —
+could not use the fast path and had to go through `attacks`. That was wrong. A line is whatever
+squares a rule says share one, and a pair is a perfectly good line: name it by the upper-left of
+the two and the leap between them, and both ends compute the same `Line` while no third square
+joins it. Counting then answers a knight exactly as it answers a queen, in `O(k)`, and it is
+checked on 3,600 random boards against the pairwise oracle. What the counting path really costs is
+narrower than it was written: the obstacle was `LineKind` being a closed enum, which is why it is
+now an interface with the queens' axes declared beside the queens.
+
+**Revised.** `conflicts` returns a `Conflicts` rather than a `Set<Cell>`. The pairing was always
+computed — a line's occupants are in hand at the moment the count is taken — and throwing it away
+left the board able to ask only "is this one in trouble". It answers "with which" now, at no cost
+to the count, which is what a screen reader naming the attacker and a status strip naming the line
+both need.
 
 **Bonus.** Having two independent implementations is what makes the property test meaningful:
 counting and pairwise are different algorithms for the same question, so agreeing on hundreds

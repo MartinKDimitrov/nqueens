@@ -84,7 +84,7 @@ rules in play.
 
 | Module             | Contains                                                                 | Depends on |
 |--------------------|--------------------------------------------------------------------------|------------|
-| `:core:boardlogic` | `Cell`, `GameState`, `GameAction`, `reduce`, `LineRules`, `conflicts`, `BoardSnapshot`/`snapshotOf`. The family, not one puzzle: no puzzle's rules are here. Pure Kotlin, **no Android**. | — |
+| `:core:boardlogic` | `Cell`, `GameState`, `GameAction`, `reduce`, `LineRules`, `conflicts`/`Conflicts`, `BoardSnapshot`/`snapshotOf`. The family, not one puzzle: no puzzle's rules are here. Pure Kotlin, **no Android**. | — |
 | `:core:ui`         | The palette, the type scale, the measures, and `formatElapsed`. No screen, no state. | — |
 | `:core:solves`     | `RecordSolve` and `SolvedBoard`: one verb, no table, no Android. | — |
 | `:core:database`   | `PuzzleDatabase`, every `@Entity` and every `@Dao`, and how a database is opened. Depends on no feature: the tables are declared here and the features are handed their own accessor. | — |
@@ -361,12 +361,28 @@ shell would count it down and declare it solved without knowing what its piece i
 own tests draw a board with a goal that is not its size, so the number is exercised there — what
 is not exercised anywhere is the shell reading it, because no second puzzle exists to read.
 
-`LineRules` says what it says and no more: it describes threats that *are* lines. A threat that is
-not — a knight's move — cannot be expressed in it at all. The domain's tests state such a rule
-pair by pair, in `PairwiseRules`, and the property test checks the line algorithm against it; it
-lives in the test sources because nothing else uses it. Making a knight playable would mean a
-pairwise conflict function beside `conflicts` and a choice between the two — a change to the
-domain, not a new class in it.
+`LineRules` describes threats as lines, and this document said until recently that a threat which
+is not a line — a knight's move — could not be expressed in it at all. That was wrong, and the
+mistake is worth keeping written down because it was believed for a while and repeated by every
+reader of it.
+
+A line is whatever set of squares a rule says shares one, and nothing requires that set to be more
+than a pair. Give every threatened pair its own line, named by the upper-left of the two and the
+leap between them, and both squares compute the same `Line`, occupancy reaches two exactly when
+both are occupied, and no third square is ever on it. A knight is then `linesThrough` returning at
+most eight lines, `conflicts` is unchanged, and the cost stays `O(k)`. Checked rather than argued:
+3,600 random boards from four to twelve, counted by lines and tested pair by pair, agree
+everywhere; no pair line ever holds a third square; and the widest index on the largest board the
+domain builds is 4,194,303, well inside an `Int`.
+
+That was the last thing standing in the way, and it is gone: `LineKind` is an interface, and the
+queens' four axes are declared beside the queens as `QueenAxis`. A game whose pieces threaten
+along something else names its own kinds, two games' kinds can never be confused because a `Line`
+carries the kind itself rather than a number standing for one, and the domain has stopped holding
+a list of directions that were only ever one puzzle's.
+
+`PairwiseRules` stays in the test sources, where it is the independent implementation the property
+test is checked against. It is not the escape hatch; it is the oracle.
 
 ## 8. Next
 
@@ -403,7 +419,7 @@ pure nor deterministic, the coroutine deciding when a tick happens, stays in the
 | Elapsed time        | zero, padding, past an hour, and a negative that reads as the start rather than as `00:-1` |
 | Records             | against a real database, not a mock of one: a solved board survives the round trip, a delete takes its own row and no other, clearing empties the table, and a best time belongs to its own size; and the connection itself, against a database the test declares, so what is exercised is how a file is opened rather than which tables are in it |
 
-269 tests, each module carrying its own: 98 in `:features:play`, 51 in `:features:scores`, 41 in `:core:boardlogic`, 26 in `:features:setup`, 17 in `:app`, 10 in `:core:settings`, 9 in `:core:puzzletype`, 6 in `:games:nqueens`, 5 in `:core:ui`, 4 in `:core:database` and 2 in `:core:scope`. All three screens are tested as composables, run on
+274 tests, each module carrying its own: 98 in `:features:play`, 52 in `:features:scores`, 44 in `:core:boardlogic`, 26 in `:features:setup`, 18 in `:app`, 10 in `:core:settings`, 9 in `:core:puzzletype`, 6 in `:games:nqueens`, 5 in `:core:ui`, 4 in `:core:database` and 2 in `:core:scope`. All three screens are tested as composables, run on
 the JVM under Robolectric, so `check` needs no device. What the tests do not yet cover is
 written down in §6.
 
