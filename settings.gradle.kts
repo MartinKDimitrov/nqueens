@@ -21,3 +21,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Puzzles"
+
+include(":core:boardlogic")
