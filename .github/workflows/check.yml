@@ -1,0 +1,47 @@
+# The gate, run where nobody can forget to install it.
+#
+# It runs `make check` and nothing else. That is the point: the pre-commit hook runs the same one
+# command, so the two cannot drift apart — a check added here and not there, or there and not
+# here, is a check that passes on one machine and fails on another.
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A second push to the same branch makes the first run's answer worthless.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use the JDK the build targets
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: make check
+        run: make check
+
+      # A red build should say which test, not "see the log". Reports are kept whatever the
+      # verdict, because a green run's coverage numbers are worth reading too.
+      - name: Keep the reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            **/build/reports/
+            **/build/test-results/
+          retention-days: 7

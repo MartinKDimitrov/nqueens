@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The same bare theme, dark. What it dresses is the launch screen — the frame the system draws
+    from the manifest before the activity exists, and the only frame the player's own choice cannot
+    reach. The phone's mode is the best answer available that early, and the right one for every
+    player who never opens the palette button. Once `onCreate` has read the preference — which it
+    does before composing anything — the activity repaints the window in the palette that was
+    actually chosen.
+-->
+<resources>
+    <style name="Theme.Puzzles" parent="android:Theme.Material.NoActionBar" />
+</resources>

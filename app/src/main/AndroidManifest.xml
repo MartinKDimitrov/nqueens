@@ -1,13 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+        `tools:replace` on the theme: a library's debug manifest names one so that its own screen
+        tests run in the window the app gives them, and this says the app's is the one that ships.
+    -->
     <application
-        android:name=".NQueensApplication"
+        android:name=".PuzzlesApplication"
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.NQueens">
+        android:theme="@style/Theme.Puzzles"
+        tools:replace="android:theme">
         <activity
             android:name=".MainActivity"
             android:exported="true">

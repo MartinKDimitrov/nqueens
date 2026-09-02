@@ -2,12 +2,12 @@
 
 Portrait-first (390 × 844) visual reference for an Android N-Queens puzzle game.
 All colors, type sizes, spacing, radii and elevation come from
-[`tokens.json`](./tokens.json) — it is the single source of truth. The SVGs in `screens/` are
+[`tokens.json`](./design/tokens.json) — it is the single source of truth. The SVGs in `design/screens/` are
 drawn from those values; never introduce a color that is not in `tokens.json`.
 
-- Icon: [`queen.svg`](./queen.svg) — single self-contained icon, `fill="currentColor"`,
+- Icon: [`queen.svg`](./design/queen.svg) — single self-contained icon, `fill="currentColor"`,
   legible down to ~14 px (12×12 board on a 360 dp screen).
-- Screens: `screens/setup.svg`, `game.svg`, `game-conflicts.svg`, `win.svg`,
+- Screens: `design/screens/` — `setup.svg`, `game.svg`, `game-conflicts.svg`, `win.svg`,
   `scores.svg`, `legend.svg` (light theme; swap each hex for its `colors.dark`
   counterpart for the dark theme).
 
@@ -42,7 +42,7 @@ drawn from those values; never introduce a color that is not in `tokens.json`.
 ### Setup (`setup.svg`)
 Title block, a preview of the board at the chosen size, a board-size stepper
 (`−` / `N × N` / `+`, min 4, default 8, max 12) and a variant dropdown
-(Queens, Rooks, Bishops, Amazons). A full-width `primary` **Start** button sits
+(one row per puzzle the build was assembled with). A full-width `primary` **Start** button sits
 above the safe area, with the current best time for the selected size below it.
 
 *Implemented differently:* the app has one puzzle, so the variant control is a row that shows it
@@ -120,7 +120,8 @@ Every cell state at real board scale with its name and backing token.
 
 ## How the app uses this
 
-The palette is transcribed by hand into `theme/Color.kt`; nothing reads `tokens.json` at build
+The palette is transcribed by hand into `theme/Color.kt`, in `:core:ui` where every screen
+reaches it; nothing reads `tokens.json` at build
 time, so the two are kept in step by review rather than by a check.
 
 - Material's own roles — primary, surface, background, error — go into the Compose colour
@@ -137,6 +138,6 @@ time, so the two are kept in step by review rather than by a check.
   carries an `lg` of 20 dp that the tokens do not define — it is the corner `win.svg` draws on the
   card, and the clear-all dialog uses it too. Of `elevation`, only `high` is transcribed, for the
   win card's shadow; `low` is not in the code.
-- `queen.svg` is converted to `res/drawable/ic_queen.xml`, tinted by the caller. The same paths,
-  white on the brand teal, make `res/drawable/ic_launcher.xml`.
+- `queen.svg` is converted to the queens module's `nqueens_ic_queen.xml`, tinted by the caller.
+  The same paths, white on the brand teal, make the app's `ic_launcher.xml`.
 - Cell state in code is one of three values — `EMPTY`, `PIECE`, `PIECE_CONFLICT`.

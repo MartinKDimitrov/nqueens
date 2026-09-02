@@ -15,15 +15,15 @@ Language: Kotlin. UI: Jetpack Compose. DI: Hilt. Build: Gradle with a version ca
 ## 2. What works today
 
 - **Setup screen.** The board drawn at the chosen size, above a stepper that moves between 4
-  and 12 and starts at 8. A variant row shows the only puzzle that exists (Queens). "Start"
+  and 12 and starts at 8. A puzzle row shows the only puzzle this build was assembled with (Queens). "Start"
   carries the size to the game route.
-- **Game screen.** The board at the chosen size; tapping places a queen and tapping again takes
+- **Play screen.** The board at the chosen size; tapping places a queen and tapping again takes
   her back. Queens that threaten each other are marked as the board changes, a counter shows how
   many are still to place, a clock counts beside it, a strip names the trouble in words, and reset
   clears the board.
 - **The solved board.** The clock stops, the board stops answering — a finger's tap and a screen
-  reader's alike — and a card over it names the size, the variant and the finishing time, says by
-  how much it beat the best board of that size and variant before it, and offers another game or
+  reader's alike — and a card over it names the size, the puzzle and the finishing time, says by
+  how much it beat the best board of that size and puzzle before it, and offers another game or
   the records. The solved board is written down once; a card that cannot be written costs the
   record and not the game.
 - **Records screen.** Reached from Setup and from the win card: a card per board size, every
@@ -61,8 +61,10 @@ Nothing. What is absent from here is absent on purpose, and section 4 says why.
 
 ## 4. What is deliberately out of scope
 
-- Nothing is remembered between runs except a solved board: the game itself, the chosen size and
-  a board in progress are all lost when the process dies.
+- Three things are remembered between runs: a solved board, the board being played, and which
+  palette the player chose. A board the system reclaimed the process from comes back with its
+  pieces, its clock and whether its win was written down; a board left by pressing back does not,
+  because leaving is a choice.
 - Hints and dead-end detection, and the solver they would need. A tested solver that nothing
   calls is weight carried for a feature nobody asked for.
 - Undo. Tapping a queen already takes her back, so undo corrects nothing a second tap does not.
@@ -80,56 +82,92 @@ rules in play.
 
 ### 5.2 Modules
 
-| Module         | Contains                                                                 | Depends on     |
-|----------------|--------------------------------------------------------------------------|----------------|
-| `:core:domain` | `Cell`, `GameState`, `GameAction`, `reduce`, `PuzzleRules`/`LineRules`, `conflicts`, `BoardSnapshot`/`snapshotOf`. Pure Kotlin, **no Android**. | —              |
-| `:core:data`   | `Databases` and the Room implementation behind it: how a database is opened. No entity, no DAO, no query. | —              |
-| `:app`         | One package per screen with its own layers — `setup/`, `game/`, `history/` — plus `puzzle/` for which puzzle this is, `storage/` for the one database their tables live in, `format/` for what more than one screen prints, and a shared `theme/`. | `:core:domain`, `:core:data` |
+| Module             | Contains                                                                 | Depends on |
+|--------------------|--------------------------------------------------------------------------|------------|
+| `:core:boardlogic` | `Cell`, `GameState`, `GameAction`, `reduce`, `LineRules`, `conflicts`, `BoardSnapshot`/`snapshotOf`. The family, not one puzzle: no puzzle's rules are here. Pure Kotlin, **no Android**. | — |
+| `:core:ui`         | The palette, the type scale, the measures, and `formatElapsed`. No screen, no state. | — |
+| `:core:solves`     | `RecordSolve` and `SolvedBoard`: one verb, no table, no Android. | — |
+| `:core:database`   | `PuzzleDatabase`, every `@Entity` and every `@Dao`, and how a database is opened. Depends on no feature: the tables are declared here and the features are handed their own accessor. | — |
+| `:core:settings`   | `ThemeChoice` and `Themes` — which palette the player asked for, over a preferences file. Null is not a third palette: it is a player who has not answered. | — |
+| `:core:scope`      | One qualifier and the scope behind it, for work that must outlive the screen that started it. | — |
+| `:core:puzzletype` | `Puzzle` and `PuzzleText` — key, words, glyph, sizes, **how many pieces solve a board**, rules — and `Puzzles`, which refuses at assembly what a game module can get wrong. | `:core:boardlogic` |
+| `:features:setup`  | Choosing what to play: the stepper, the puzzle picker, the board preview, its view model and its route — and the button that chooses the palette, which is the one thing it writes. | `:core:puzzletype`, `:core:boardlogic`, `:core:settings`, `:core:scope`, `:core:ui` |
+| `:features:play`   | The board a puzzle is played on: the squares, the top bar, the win card, the celebration, the sounds, its view model and its route. | `:core:puzzletype`, `:core:solves`, `:core:boardlogic`, `:core:scope`, `:core:ui` |
+| `:features:scores` | The boards seen solved: the repository over its table, the screen, and the implementation of `RecordSolve`. | `:core:database`, `:core:solves`, `:core:scope`, `:core:ui` |
+| `:games:nqueens`   | One puzzle: `NQueensLines`, the words, the glyph, and one binding into the set. | `:core:puzzletype`, `:core:boardlogic` |
+| `:app`             | `MainActivity`, `PuzzlesApplication` and the navigation host. Three files: no table, no query, no rule — what it does decide is which palette the resolved choice means, and everything Compose does not draw: the window behind the app and the two system bars over it. | every module above except `:core:boardlogic`, reached through `:core:puzzletype`, and `:core:scope`, reached through the features that write on it |
 
-`:core:domain` holds what every screen shares, including `MIN_BOARD_SIZE`: a board of two or
-three has no solution at all, and one of one is a single square, so four is where the puzzle
-starts being one — a fact about it, not about the app. A screen's own rules stay with the
-screen — `setup/domain` names the size the stepper starts on, and `LARGEST_PLAYABLE_BOARD`, in
-`puzzle/` beside the variant, names the largest board this app will play — both the stepper and
-the game route answer to it, and neither is something the puzzle cares about. The domain holds boards far larger — up to the point where one
-entry per square stops being a grid worth building.
+`:features:setup` and `:features:play` also take `:games:nqueens` as a **test** dependency: they are drawn and tested
+with a real puzzle and compiles against none (TRADEOFFS D16).
 
-A feature that keeps something owns its table, its queries and the repository over them; the
-database they live in is the app's, one for all of them, and sits in `storage/` because Room needs
-every entity declared in one place (TRADEOFFS D4). `history/` states what it needs as
-`SolveRepository` in its `domain` and implements it over Room in its `data`, so what a view model
-is handed is the interface and a second source later is a change behind it.
+**No two modules a person would work in at once depend on each other.** The shell depends on
+`:core:puzzletype` and never on a game. A game module contributes its puzzle into a set with one
+`@Provides @IntoSet`, the route carries a puzzle's key rather than an assumption
+(`play/{puzzle}/{size}`), Setup offers whatever the set holds, and nothing outside a game module
+names a puzzle. So a second one is that module and two lines: the `include` and `:app`'s dependency on it.
 
-The module boundary is the only layering the build enforces: `:core:domain` compiles against
-the Kotlin standard library alone, so the compiler cannot see Android from it. Inside `:app` the
-layers are packages held by convention; the view models keep their state in Compose's
-`mutableStateOf`, so `presentation` is not a framework-free layer (TRADEOFFS D12, D13).
+`Puzzles` is where a game module's mistakes are caught, at assembly rather than on a screen: a
+key a route could not carry would make Start do nothing for ever, a transposed range would take
+down Setup, and a size the domain refuses would throw during composition. All three are refused
+with a message that names the puzzle.
+
+The shell writes a solved board through `:core:solves`, which `:features:scores` implements: the
+two features that exchange data depend on a contract neither of them owns, and neither can reach
+the other's screens, tables or types.
+
+`:core:boardlogic` holds what every puzzle of this family shares, and nothing that is true of only
+one. `MIN_BOARD_SIZE` is a board of one square — the smallest thing that is a board — because
+"below four there is no solution" is a fact about queens and not about boards: another puzzle may
+have one on
+every size. Which boards are worth playing, and how many pieces solve them, are the puzzle's own
+answers and travel on `Puzzle.sizes` and `Puzzle.piecesToSolve`; the stepper, the route guard and
+the win condition all ask the puzzle rather than assume. The domain's ceiling is where one entry
+per square stops being a grid worth building.
+
+Every table lives in `:core:database`, with the database they share and the DAOs over them,
+because Room needs every entity declared in one place (TRADEOFFS D4, revised by D18). A feature
+owns the repository over its own DAO and nothing below it: `:features:scores` turns rows into
+solves and back, and never says how a database is opened.
+
+The module graph is the layering, and the compiler enforces all of it: a dependency that is not
+declared cannot be written by accident. `:core:boardlogic` and `:core:solves` compile against the
+Kotlin standard library alone. Inside a module the layers are still packages held by convention;
+the view models keep their state in Compose's `mutableStateOf`, so `presentation` is not a
+framework-free layer (TRADEOFFS D12, D13).
 
 ### 5.3 Screens
 
 | Screen    | State                                    | Pattern | Why                                            |
 |-----------|------------------------------------------|---------|------------------------------------------------|
-| **Setup** | `SetupUiState`, in `SetupViewModel`      | MVVM    | two inputs and two buttons; MVI would be ceremony |
-| **Game**  | `GameState` → `GameUiState`, in `GameViewModel` | MVI | one `onAction` over the domain's `reduce`; the screen reads a projection, never the state |
+| **Setup** | `SetupUiState`, in `SetupViewModel`      | MVVM    | a stepper, a picker and three buttons, none of which changes what another means; MVI would be ceremony |
+| **Play**  | `GameState` → `PlayUiState`, in `PlayViewModel` | MVI | one `onAction` over the domain's `reduce`; the screen reads a projection, never the state |
 | **Scores** | `ScoresUiState`, in `ScoresViewModel`   | MVVM    | a list read from a repository and two commands over it |
 
 ### 5.4 Dependency injection
 
 **Hilt, for what the screens cannot make themselves.** It started as one binding and is now
-seven, across seven modules in five files: the `Variant`, the database connection, the puzzle's
-database, its DAO, the repository over it, the clock a record is stamped with, and the scope a
-write outlives its screen in. `GameViewModel` needs to know which
-puzzle it is playing, and `PuzzleModule` provides the `Variant` — the piece it is played with, the lines that piece
-threatens along, and the words the game says about it: its name, the counter's label, what a
-square announces to a screen reader, the idle prompt and the conflict plural. Both view models
-receive it, so the glyph, the header, the counter, the strip, Setup's subtitle and the
-descriptions of the squares a piece stands on all come from one place instead of being spelled
-out on each screen.
+nine, spread across the modules that own what they bind: the `Puzzle`, the database, its DAO,
+the repository over it, the verb a game writes a record through, the clock a record is stamped
+with, the scope a write outlives its screen in, the preference file, and the palette read out of
+it.
+
+The one that carries the architecture is the first. `:games:nqueens` contributes a single
+`@Provides @IntoSet fun puzzle(): Puzzle = Queens`, and that is the whole of what a game module
+has to do to exist. Into a **set**, not on its own: two games binding one `Puzzle` would be a
+duplicate binding and a failed build, which is the difference between a second puzzle being an
+addition and being a replacement. What reads the set is `Puzzles`; the shell asks it for the
+puzzle a route named. Setup is given the whole set, because choosing needs it; the board is
+  given one puzzle and never learns there are others.
+
+The glyph, the header, the counter, the strip, Setup's subtitle and title, the sizes the stepper
+moves between and the descriptions of the squares a piece stands on all come from that one place
+instead of being spelled out on each screen.
 Every id on it is annotated — `@StringRes`, `@PluralsRes`, `@DrawableRes` — so putting a plain
 string where the plural belongs is a failed build rather than a crash at the first conflict.
-What stays is the app's own vocabulary: the board summary's shape, reset, back, the clock, the
-empty square, everything the win card says, everything the records screen says, and Setup's title,
-which names the app rather than the puzzle.
+What stays is each screen's own vocabulary, in its own resources: the board summary's shape,
+reset, back, the clock, the empty square and everything the win card says. The records screen's
+words are its feature's. Setup's title is the puzzle's own name, so a build of another game is
+not headed with this one's.
 
 The binding is what a container is for, but it is not the only thing keeping the seam honest:
 `conflicts` and `snapshotOf` take their rules with **no default**, so no call site can quietly
@@ -158,18 +196,19 @@ move that cannot be carried out — a tap outside the board, a board too small t
 
 The same holds one layer up: a board size arriving on the game route that the app cannot play
 sends the player back to Setup to choose one, rather than raising. The game destination owns
-that — `gameDestination` in `game/presentation` declares the route, the argument's type and the
-guard together, and takes the sizes it will play as a parameter, so the policy stays at the
-composition root while the contract stays with the screen that reads it. The reducer's totality
-is the domain's own guarantee; this one is the guard's alone, and `GameViewModel` still raises
+that — `playDestination` in `play/presentation` declares the route, the argument's type and the
+guard together, and reads the sizes off the puzzle it was handed, so the policy sits with the
+screen that enforces it rather than with the host that joins the screens. The reducer's totality
+is the domain's own guarantee; this one is the guard's alone, and `PlayViewModel` still raises
 if the size never arrives at all.
 
 Both sides of that are tested from the outside. Seven tests launch `MainActivity` and press Start,
 so the Hilt graph, the navigation host and the route argument are exercised as the app assembles
 them — including that the rules it was given are the ones that mark an attack, that reset reaches
-the state and that back leaves the game. Three more drive the navigation host with its own
-controller and send it a size the app cannot play, which is the only way to reach the guard,
-since the stepper cannot produce such a size and there is no deep link.
+the state and that back leaves the game. Four more drive the navigation host with its own
+controller and send it a size the app cannot play and a puzzle it was not assembled with, which
+is the only way to reach the guard, since the stepper cannot produce either and there is no deep
+link.
 
 What a Compose test cannot see is what was painted: it finds squares by content description,
 and that does not change when a colour does. So the square's decisions — which background, and
@@ -190,7 +229,7 @@ covers. Setup's preview is checked by the
 description it carries rather than by the board it draws. The dark palette is chosen explicitly
 wherever it is asserted, so the dark branch of the system setting is never taken. A disabled
 stepper button is checked by its state, not by the dimming that shows it. Setup's stepper and
-variant row take a minimum height rather than a fixed one, so the size and the range beneath it
+puzzle row take a minimum height rather than a fixed one, so the size and the range beneath it
 survive the largest type on a narrow screen — where a fixed box dropped the range line entirely —
 and nothing asserts that either. `launchSingleTop` on
 the Start route has no test of its own. The counter's digits go through a string resource so they
@@ -219,16 +258,16 @@ it. And the date in a record row keeps `weight(1f)` so that it, rather than the 
 way when the row runs out of width — measured at the narrowest window and the largest type, that
 modifier changes nothing, so no test pins it either.
 
-Three belong to the records screen. No test presses `Best times` on a running app, so the route
-from Setup to the list — and the one from the win card — is wired but never walked; the seven
-tests that launch `MainActivity` stop at the board. The day a record carries is asserted in one
+Three belong to the records screen. The route from Setup to the list is walked — one test presses
+`Best times`, comes back through `New game`, and asserts the board it left with — but the one from
+the win card is not. The day a record carries is asserted in one
 time zone, which the test pins itself, and in whatever locale the test runs under, which it does
 not: what the date reads as elsewhere is the platform's business and nothing here proves it. And
 that day carries no year, so a board solved last August and one solved this August read alike.
 
 Two more belong to what a solved board writes down. The view model is tested against a fake
 repository and the repository against a real database, and no test crosses that seam — the Hilt
-graph itself is built by the compiler and exercised by the seven tests that launch the app, but
+graph itself is built by the compiler and exercised by every test that launches the app, but
 that a solved board's row reaches the real table is not asserted anywhere. And the clock that
 stamps a record is the system's only in production; every test hands the view model one of its
 own. The same is true of the speaker: the game screen provides the one that reaches the device
@@ -239,7 +278,13 @@ none, and that no two sounds name the same file. What no test reaches is the wir
 game screen is the only place that provides the real speaker, and deleting that one line leaves
 an app that makes no noise and a suite that stays green.
 
-Nine things are known and left as they are. **Three colour pairings stay below AA**, against
+Nine things are known and left as they are. **A board written down while the records are being
+cleared can outlive the clearing.** Both writes go to `:core:scope`, which runs one at a time but
+is not a queue: writing a record is a read and then a write, clearing is one write, and a coroutine
+that suspends twice can finish after one handed over later that suspends once. The player has to
+solve a board and clear the table in one movement, and the window is the milliseconds the record
+spends between its two halves — but the row does survive an emptied table. Closing it means the two
+writes knowing about each other, which costs more than the case does. **Three colour pairings stay below AA**, against
 the 4.5:1 the guideline asks of text: the status strip's message, `conflict` on `conflictGlow` at
 3.07:1, which is the one the game draws most; the win card's "New best" line, `success` on
 `surface` at 3.45:1; and the records screen's **Clear all**, `conflict` on `background` at 4.20:1.
@@ -257,12 +302,12 @@ has nowhere to say "not saved"; only a failed *read* is reported, and only on th
 decodes in the background and a sample played before it is ready is dropped without a word, so
 the tap that opens the board — and the one after every return from the records, since the pool is
 built per screen — can be silent. Robolectric's pool has no loading at all, so no test can see it.
-**Two edges are not in the module table**: the game feature writes history's
-records, so `game/presentation` depends on `history/domain`; and `storage` names the history
-table while `history/data` names the database back, which is a cycle Room forces and nothing
-breaks. **`:core:data` has no coverage floor**: the domain is gated at 90% line and branch and
-the view models at 85% line, and the third module that holds code is gated by its three tests
-alone. **The ticker never stops waking**: it is a `while (true)` in the view model's scope, and on a
+**Eight modules have no coverage floor**: the domain is gated at 90% line and branch and the view
+models at 85% line, in the three modules that hold one. `:core:database`, `:core:ui`, `:core:solves`,
+`:core:puzzletype`, `:core:settings`, `:core:scope`, `:games:nqueens` and `:app` are gated by their
+own tests alone, and one has none at all: `:core:solves` is one interface and one data class,
+with nothing to
+run. **The ticker never stops waking**: it is a `while (true)` in the view model's scope, and on a
 solved board it stops counting rather than sleeping. And **the win card counts in seconds**: a
 board beaten by nine minutes reads "New best — 540s faster than before" while every other
 duration on the screen is minutes and seconds.
@@ -297,28 +342,36 @@ threatens along, and `conflicts` counts occupancy per line, so the validator say
 queens and nothing about which puzzle is being played.
 
 It carries the **threats** and not the **goal**. The domain says so in its own signature:
-`piecesLeft(pieces, target)` takes the target from the caller, and `snapshotOf` is the one place
-that decides it is the board size. The vocabulary follows — the domain knows pieces, lines and
-conflicts, and the word "queen" survives only in what the screens say, which the `Variant` holds
-in one place: its name and its piece, and on its `VariantText` the subtitle, the counter's label,
-the two square descriptions, the prompt and the plural. Where the queen does survive in the code
-is in names — `BoardColors.queen`, `LightQueen`, `DarkQueen`, `queenTint`, `QUEEN_SCALE`, the
-drawable `ic_queen`, and in the domain the pairwise oracle `NQueens` beside `NQueensLines`. What
-the rules do not carry is the goal: that the target is one piece per row lives in that call and in
-`BoardSnapshot.isSolved`, so a puzzle counting to something other than `n` is a change to those
-two and not to the rules. Nor does the domain's shape reach the screen: Setup's variant row shows
-the one puzzle there is and opens nothing.
+`piecesLeft(pieces, target)` takes the target from the caller, and `snapshotOf` passes on the
+number it was handed rather than deciding one; the puzzle decides, on `piecesToSolve`. The vocabulary follows — the domain knows pieces, lines and
+conflicts, and the word "queen" survives only in what a puzzle says, which `Puzzle` holds in one
+place: its name and its piece, and on its `PuzzleText` the subtitle, the counter's label, the two
+square descriptions, the prompt and the plural. Where the queen does survive in the code is in
+three names the palette owns — `BoardColors.queen`, `LightQueen`, `DarkQueen` — which are the
+shell's word for whatever piece it is asked to draw, and under which a second puzzle's piece would
+be drawn. It survived in two more places until the fifth round of audits: `queenTint`/`QUEEN_SCALE`
+and the whole of `SquareMotion`'s prose, which described a queen landing because that is what it was
+written watching. Both speak of a piece now.
+
+The rules carry the **threats**; the **goal** is beside them on the puzzle. `Puzzle.piecesToSolve`
+answers "how many pieces solve a board of this size", `snapshotOf` takes that number rather than
+assuming the board's own, and `Puzzles` refuses a goal nobody could reach. The queens say
+`{ size -> size }`; a puzzle whose pieces threaten differently would say something else, and the
+shell would count it down and declare it solved without knowing what its piece is. The domain's
+own tests draw a board with a goal that is not its size, so the number is exercised there — what
+is not exercised anywhere is the shell reading it, because no second puzzle exists to read.
 
 `LineRules` says what it says and no more: it describes threats that *are* lines. A threat that is
-not — a knight's move — cannot be expressed in it at all. `PuzzleRules` states such a rule pair by pair and the property
-test already uses it, but no production code consumes it: making one playable would mean adding
-a pairwise conflict function beside `conflicts` and choosing between the two. That is a change
-to the domain, not a new class in it.
+not — a knight's move — cannot be expressed in it at all. The domain's tests state such a rule
+pair by pair, in `PairwiseRules`, and the property test checks the line algorithm against it; it
+lives in the test sources because nothing else uses it. Making a knight playable would mean a
+pairwise conflict function beside `conflicts` and a choice between the two — a change to the
+domain, not a new class in it.
 
 ## 8. Next
 
 The records are grouped by board size alone while the best time is asked for a size **and** a
-variant — two spellings of what is comparable, and only one of them is on screen. With one puzzle
+puzzle — two answers to what is comparable, and only one of them is on screen. With one puzzle
 they agree; they are written down here because nothing in the code holds them together.
 
 Where time lives is settled and worth stating, because it looks like a violation of §5.1 and is
@@ -337,20 +390,20 @@ pure nor deterministic, the coroutine deciding when a tick happens, stays in the
 | Projection          | per-cell statuses, the counter, the solved verdict, and that row and column are not transposed |
 | View model          | input → board; **85% line coverage gated** on `*ViewModel*` classes           |
 | Screens             | rendered under Robolectric inside `make check`, with no device: what each square says, that a tap reports the right one, that the counter follows the board, and that the stepper's ends hold |
-| Painting            | which background a square takes, and whether a queen is drawn on it and in which colour — as a pure function, and again as pixels on a rasterised board |
+| A square's colours  | which background a square takes, and whether a queen is drawn on it and in which colour — as a pure function, and again as pixels on a rasterised board |
 | Layout              | at seven window shapes: no square below 24 dp, the whole board reachable, and the details under the board or beside it; Setup's Start still reachable when the screen is short |
 | Wiring              | `MainActivity` launched for real: Start opens a board at the chosen size, takes a queen, marks an attack, resets and goes back |
 | Route guard         | a size the app cannot play sends the player back to Setup instead of reaching the board |
 | Win                 | a solved board is covered by the card, which names it and the finishing time and says by how much it beat the best before it; the squares under the card offer no tap to a finger or to TalkBack; the clock stops with the board and the solve is written down once |
-| The clock and the record | a solved board is written down once and no oftener, with the time it took; a board nobody solved is not written down at all; a table that refuses the write leaves the game standing and claims no record, and the next game is still written; a board played again does not inherit the finished game's best time; and the best time it is compared against belongs to that size **and** that variant |
+| The clock and the record | a solved board is written down once and no oftener, with the time it took; a board nobody solved is not written down at all; a table that refuses the write leaves the game standing and claims no record, and the next game is still written; a board played again does not inherit the finished game's best time; and the best time it is compared against belongs to that size **and** that puzzle |
 | The database over time | a version this build cannot migrate is refused rather than emptied, against a real file, with the rows still there afterwards |
 | The celebration     | the motion as a pure function of one number: in the middle and invisible at the start, out where the design puts it, grown, turned and gone at the end, and clamped outside; and that it is drawn over a solved board and over no other |
 | The records screen  | the boards are grouped by size and ordered by time on the screen itself, every solve keeps a delete button that names the moment it was finished, the solve time survives the largest font on a narrow phone, clearing stays within reach however long the table is, clearing everything is asked about first and cancelling clears nothing, and the three empty states — not answered yet, nothing solved, cannot be read — each say their own thing |
 | Painting            | the two board colours, a piece's glyph, both the background and the glyph of a square under attack, the dark palette, and the leader's badge on the records screen — read as pixels off a rasterised screen |
 | Elapsed time        | zero, padding, past an hour, and a negative that reads as the start rather than as `00:-1` |
-| Records             | against a real database, not a mock of one: a solved board survives the round trip, a delete takes its own row and no other, clearing empties the table, and a best time belongs to its own size; and the connection itself, against a table `:core:data` declares in its own tests |
+| Records             | against a real database, not a mock of one: a solved board survives the round trip, a delete takes its own row and no other, clearing empties the table, and a best time belongs to its own size; and the connection itself, against a database the test declares, so what is exercised is how a file is opened rather than which tables are in it |
 
-197 tests: 40 in `:core:domain`, 3 in `:core:data`, 154 in `:app`. All three screens are tested as composables, run on
+269 tests, each module carrying its own: 98 in `:features:play`, 51 in `:features:scores`, 41 in `:core:boardlogic`, 26 in `:features:setup`, 17 in `:app`, 10 in `:core:settings`, 9 in `:core:puzzletype`, 6 in `:games:nqueens`, 5 in `:core:ui`, 4 in `:core:database` and 2 in `:core:scope`. All three screens are tested as composables, run on
 the JVM under Robolectric, so `check` needs no device. What the tests do not yet cover is
 written down in §6.
 

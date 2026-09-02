@@ -22,14 +22,15 @@ dependencyResolutionManagement {
 
 rootProject.name = "Puzzles"
 
+include(":app")
 include(":core:boardlogic")
-include(":core:puzzletype")
-include(":core:solves")
-include(":core:scope")
-include(":core:ui")
-include(":core:settings")
 include(":core:database")
-include(":games:nqueens")
+include(":core:ui")
+include(":core:solves")
+include(":core:puzzletype")
+include(":core:scope")
+include(":core:settings")
 include(":features:setup")
 include(":features:play")
 include(":features:scores")
+include(":games:nqueens")
