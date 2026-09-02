@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nqueens_name">Queens</string>
+    <string name="nqueens_counter">QUEENS LEFT</string>
+    <string name="nqueens_cell">Row %1$d, column %2$d, queen</string>
+    <string name="nqueens_cell_attacked">Row %1$d, column %2$d, queen under attack</string>
+    <string name="nqueens_idle">Tap a cell to place a queen</string>
+    <string name="nqueens_subtitle">Place N queens. No two may attack.</string>
+    <plurals name="nqueens_conflict">
+        <item quantity="one">%1$d queen is under attack</item>
+        <item quantity="other">%1$d queens attack each other</item>
+    </plurals>
+</resources>
