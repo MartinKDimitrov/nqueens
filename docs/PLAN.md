@@ -799,3 +799,45 @@ would not rewrite moved down into `:core:*`; what is left above is the puzzle it
   subtitle is bounded to two lines, which is what made room for it.
 - The icon is `:features:play`'s, copied rather than shared: a feature cannot reach another feature,
   and one arrow is a smaller price than a module to hold it.
+
+**Step 9.31 — the board was drawn again on every tick of the clock.** *(built)*
+- **Every square was drawn again on every tick of the clock.** Compose decides whether a composable
+  may be skipped from stability metadata the Compose compiler emits, and `:core:boardlogic` and
+  `:core:puzzletype` are compiled without it — which is the point of them. With no answer the
+  compiler assumes the worst, so a `Cell`, a `BoardSnapshot` or a `Puzzle` reaching a composable
+  made it unskippable: measured at 384 square compositions across six frames where 64 were needed,
+  on an eight by eight board. `compose-stability.conf` names those two packages and the count drops
+  to 64, the board composes once, and the compiler's own report calls `Square` skippable. No source
+  changed.
+- Two other explanations were measured first and were both wrong: remembering `PlayActions` changed
+  nothing, and neither did passing the square only primitives. Recorded because guessing twice was
+  the expensive part.
+
+**Step 9.32 — a claim this project had been repeating.** *(built)*
+- **A knight's move can be expressed as lines, and PROJECT §7 and D1 both said it could not.** A
+  line is whatever squares a rule says share one, and a pair is a line: name it by one of its two
+  squares and the leap between them, and both ends compute the same `Line` while no third square
+  joins it. Checked rather than argued — 3,600 random boards from four to twelve agree with the
+  pairwise oracle everywhere, no pair line ever holds a third square, and the widest index on the
+  largest board the domain builds is well inside an `Int`.
+- What is actually closed is `LineKind`, an enum a game module cannot extend. Both documents say
+  that now, and the mistake is left written down rather than quietly replaced: it was believed for
+  a while, and every reader of those two paragraphs repeated it back.
+
+**Step 9.33 — three seams, so that what comes next is small.** *(built)*
+- **`LineKind` is an interface, not an enum.** The four axes it held are the queens' geometry and
+  now live beside the queens as `QueenAxis`. A game whose pieces threaten along something else
+  declares its own kinds; two games' kinds cannot be confused, because a `Line` carries the kind
+  itself rather than a number standing for one. This is what a knights or an amazons module was
+  waiting for, and it is the whole of it.
+- **`Puzzle.rules` is `(size) -> LineRules`**, the shape `piecesToSolve` already had. The queens
+  ignore the argument. Nothing needs it yet; a rule that had to see the board it is played on —
+  a wall interrupting a line, a region — could not have been given one afterwards without changing
+  every game module at once.
+- **`conflicts` answers with which piece, not only which pieces.** It always knew: the occupants of
+  a line are in hand at the moment the count is taken, and `.keys` threw them away. `Conflicts`
+  keeps them, the count is unchanged, and the board's own reads — membership, how many, whether any
+  — are the same three calls they were. What it buys is the sentence a screen reader needs and the
+  status strip the design already describes.
+- None of the three adds a feature, and all three are what the audits found the next ones waiting
+  on. The domain's coverage is unmoved at 100% line and 98.65% branch.

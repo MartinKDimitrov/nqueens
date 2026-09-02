@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.android.lint) apply false
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.detekt) apply false
     alias(libs.plugins.spotless) apply false
     // Declared here, applied to the modules below: on the root alone it analyses nothing.
@@ -106,6 +107,15 @@ subprojects {
             }
             testOptions.unitTests.all { test -> test.enabled = test.name.contains("Debug") }
             lint { gate() }
+        }
+    }
+
+    // Every module that composes is told which of the domain's types hold still. Said once here
+    // rather than per module, because the answer is the same everywhere and a module that
+    // silently missed it would draw its whole screen again on every state change.
+    plugins.withId("org.jetbrains.kotlin.plugin.compose") {
+        configure<org.jetbrains.kotlin.compose.compiler.gradle.ComposeCompilerGradlePluginExtension> {
+            stabilityConfigurationFile.set(rootProject.layout.projectDirectory.file("compose-stability.conf"))
         }
     }
 
